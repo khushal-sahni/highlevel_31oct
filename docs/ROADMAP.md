@@ -20,21 +20,21 @@ Done enough means Part 1 works, Part 2 holds all five properties, seed and bench
 - [x] Write `docs/THE-PROBLEM.md`
 - [x] Point working docs and `AGENTS.md` at this take-home
 
-### M1 — Design `[ ]`
+### M1 — Design `[x]`
 > Choose mechanics and write them down before code.
 
-- [ ] Answer the design questions in `docs/THE-PROBLEM.md`
-- [ ] Record choices in `docs/DECISIONS.md`
-- [ ] Write root `DESIGN.md` (the graded 2–3 page write-up)
+- [x] Answer the design questions in `docs/THE-PROBLEM.md`
+- [x] Record choices in `docs/DECISIONS.md`
+- [x] Write root `DESIGN.md` (the graded 2–3 page write-up)
 
-### M2 — Foundation (Part 1) `[ ]`
+### M2 — Foundation (Part 1) `[x]`
 > Thin surface. They are not grading this beyond "it works."
 
-- [ ] Workspace scoping via `X-Workspace-Id`
-- [ ] Create an opportunity
-- [ ] Move a single opportunity to another stage and record the transition
-- [ ] List opportunities in a stage, simple pagination
-- [ ] One command that boots the app on a clean machine
+- [x] Workspace scoping via `X-Workspace-Id`
+- [x] Create an opportunity
+- [x] Move a single opportunity to another stage and record the transition
+- [x] List opportunities in a stage, simple pagination
+- [x] One command that boots the app on a clean machine
 
 ### M3 — Bulk job (Part 2) `[ ]`
 > This is the exercise.
@@ -65,7 +65,7 @@ Done enough means Part 1 works, Part 2 holds all five properties, seed and bench
 - [ ] Root `README.md`: how to run, seed, test, what is and is not implemented
 - [ ] `DESIGN.md` matches the code, including holes and the 10× failure
 - [ ] Commit history tells the story (not one squashed commit)
-- [ ] Ranked "another week" list in `DESIGN.md`
+- [x] Ranked "another week" list in `DESIGN.md`
 
 ---
 

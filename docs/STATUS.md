@@ -1,83 +1,88 @@
 # STATUS.md
 > Weekend dashboard. Read this first. Update this last.
-> Last updated: 2026-10-31 | Session: #1
+> Last updated: 2026-10-31 | Session: #3
 
 ---
 
 ## What Works Right Now
 
-- Nothing implemented. No application code, datastore, or tests yet.
-- The assignment is restated in [THE-PROBLEM.md](THE-PROBLEM.md).
+- Part 1 API: create, versioned single move + transition, keyset list-by-stage.
+- `X-Workspace-Id` required; unknown workspace is 404.
+- Stale `expectedVersion` is 409 and writes no transition.
+- Five integration tests against Postgres.
+- Dev seed: one workspace and six stages.
 
 ---
 
 ## In Progress
 
-- Docs-only pass: understand the take-home before design.
+- Nothing. Next is the bulk job (M3), when you confirm scope.
 
 ---
 
 ## Known Broken / Blocked
 
-- None. Blocked only on reading the problem and then doing design.
+- `docker compose up --build` failed on this machine because host port 3000 is already taken. The image builds. Map a free host port if 3000 is busy.
 
 ---
 
 ## Where We Left Off
 
-Session #1 rewrote the template docs to match the HighLevel SDE-3 brief. No design choices were made. Next step: you read `docs/THE-PROBLEM.md`. Design starts only when you ask for it.
+Session #3 shipped Part 1. No bulk job, no job tables, no 500k seed. Next step: enqueue + worker + the five safety properties.
 
 ---
 
 ## Current Architecture State
 
 ```
-Nothing built yet.
-```
-
-Expected later (names may change in design):
-
-```
 src/
-├── opportunities/     # Part 1: create, single move + transition, list-by-stage
-├── bulk-move/         # Part 2: enqueue, worker, progress, safety properties
-└── workspaces/        # tenant scoping via X-Workspace-Id
+├── controllers/     # OpportunityController
+├── services/        # OpportunityService, LoggerService
+├── repositories/    # workspace, stage, opportunity, transition
+├── middleware/      # WorkspaceMiddleware, AppExceptionFilter
+├── db/              # pool, migrate, seed
+└── workers/         # not started
 ```
+
+Two processes later. Only the API process exists.
 
 ---
 
 ## Environment & Config
 
-None yet. Stack is undecided. Env vars will be listed here after design.
+```env
+DATABASE_URL=postgres://app:app@localhost:5432/opportunities
+PORT=3000
+```
+
+Dev seed workspace: `11111111-1111-4111-8111-111111111111`
+
+New Lead stage: `22222222-2222-4222-8222-000000000001`
 
 ---
 
 ## How to Run Locally
 
-Not applicable. The one-command run (`docker compose up` or equivalent), small seed, and tests come after implementation. The graded README will document them.
+```bash
+docker compose up --build
+# API :3000, Postgres :5432, migrations + tiny seed on boot
 
-Until then, start at [THE-PROBLEM.md](THE-PROBLEM.md).
+# tests (Postgres must be up)
+DATABASE_URL=postgres://app:app@localhost:5432/opportunities npm test
+```
 
 ---
 
 ## Tech Debt
 
-- None. No code yet.
+- Host port 3000 can collide; compose still publishes 3000.
+- Known design holes (accepted): one shared Postgres, one global in-flight chunk, new-key idempotency slip-through.
 
 ---
 
 ## Open Questions
 
-Design questions only — listed in [THE-PROBLEM.md](THE-PROBLEM.md), not answered:
-
-- Snapshot vs live filter set
-- Manual-move vs job collision rule
-- Idempotency key and durable dedupe
-- Chunk / cursor / resume
-- Progress as committed state; slow vs stuck vs failed
-- Isolation mechanism and the hole it leaves
-- Language and datastore (NestJS preferred vs Go; Postgres vs Mongo; extras)
-- What fails at 10×
+None on Part 1. Bulk job mechanics stay as in [DESIGN.md](../DESIGN.md).
 
 ---
 
@@ -85,7 +90,7 @@ Design questions only — listed in [THE-PROBLEM.md](THE-PROBLEM.md), not answer
 
 | Metric | Value |
 |---|---|
-| Total sessions | 1 |
-| Modules complete | 0 |
-| Hard-property tests | None yet |
+| Total sessions | 3 |
+| Modules complete | Part 1 |
+| Hard-property tests | None yet (Part 1 only) |
 | Last measured | Never |

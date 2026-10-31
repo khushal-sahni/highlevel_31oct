@@ -2,27 +2,34 @@
 
 HighLevel SDE-3 take-home. One hard operation: move up to 50,000 filtered opportunities to another stage as a background job that stays correct under retry, restart, and concurrent edits.
 
-**Start here:** [docs/THE-PROBLEM.md](docs/THE-PROBLEM.md)
+**Problem:** [docs/THE-PROBLEM.md](docs/THE-PROBLEM.md)
 
-That file is the assignment in plain language. Read it before design or code.
+**Design:** [DESIGN.md](DESIGN.md)
 
-## Status
+## What works
 
-Nothing is implemented yet. Stack and job design are not chosen.
+Part 1 only: create an opportunity, move one opportunity with a version check and a transition, list a stage with a keyset cursor. Tenant header is `X-Workspace-Id`.
 
-Working notes:
+The bulk job is not implemented yet.
 
-- [docs/STATUS.md](docs/STATUS.md) — current state
-- [docs/ROADMAP.md](docs/ROADMAP.md) — milestones
-- [docs/DECISIONS.md](docs/DECISIONS.md) — decisions (none on stack or job mechanics yet)
-- [AGENTS.md](AGENTS.md) — how this repo is built when implementation starts
+## Run
 
-## Later (not written yet)
+```bash
+docker compose up --build
+```
 
-The brief asks for these at submission time:
+API listens on port 3000. Postgres is on 5432. Migrations and a tiny seed run on boot.
 
-- This README, filled in: how to run, how to seed, how to test, what is and is not implemented
-- `DESIGN.md` — the 2–3 page write-up (the most important submission file)
-- `BENCHMARKS.md` — measured numbers, hardware, method
+Dev workspace: `11111111-1111-4111-8111-111111111111`
 
-Do not expect `docker compose up` or tests in this commit.
+New Lead: `22222222-2222-4222-8222-000000000001`
+
+## Test
+
+Postgres must be up.
+
+```bash
+DATABASE_URL=postgres://app:app@localhost:5432/opportunities npm test
+```
+
+Working notes: [docs/STATUS.md](docs/STATUS.md), [docs/ROADMAP.md](docs/ROADMAP.md), [docs/DECISIONS.md](docs/DECISIONS.md), [AGENTS.md](AGENTS.md).

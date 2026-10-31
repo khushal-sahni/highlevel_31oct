@@ -7,9 +7,9 @@
 
 - **Name**: Opportunities Bulk Stage Move
 - **Purpose**: HighLevel SDE-3 take-home. One hard operation: move up to 50,000 filtered opportunities to another stage as a background job that is idempotent, resumable, observably progressing, correct under concurrent edits, and polite to other traffic.
-- **Stack**: Undecided. Assignment allows Node.js (TypeScript, NestJS preferred) or Go; MongoDB or PostgreSQL as the primary store. Extra systems (Redis, Kafka, a queue) only if the design justifies each one.
-- **Database**: Undecided. Chosen in the design phase.
-- **Key External Services**: None required by the brief. Do not add any unless design records a reason.
+- **Stack**: NestJS, TypeScript, `pg` (node-postgres). Two processes: API and worker. Locked in [DESIGN.md](DESIGN.md).
+- **Database**: PostgreSQL is the primary store and the queue. No Redis, Kafka, or ORM owning the chunk SQL.
+- **Key External Services**: None. Do not add any unless design records a reason.
 
 The product is the bulk job, not a CRM. Part 1 (create, single move, list-by-stage) exists only so Part 2 has somewhere to run.
 
@@ -23,7 +23,7 @@ Read [docs/THE-PROBLEM.md](docs/THE-PROBLEM.md) before proposing design or writi
 
 This project uses **class-based, layered architecture**. Every piece of logic lives in a class. No free-floating functions outside of utility helpers.
 
-Stack is not locked. When implementation starts, map these layers onto NestJS modules or the Go equivalent. Do not invent a second architecture.
+Map these layers onto NestJS modules. Do not invent a second architecture. Repositories own the SQL.
 
 ### Layer Structure
 
