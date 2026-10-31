@@ -1,21 +1,20 @@
 # STATUS.md
 > Weekend dashboard. Read this first. Update this last.
-> Last updated: 2026-10-31 | Session: #5
+> Last updated: 2026-10-31 | Session: #6
 
 ---
 
 ## What Works Right Now
 
-- Part 1 and the bulk job, as before.
-- Large seed: 500,000 opportunities + 5 small workspaces. `npm run seed:large`.
-- Benchmarks measured and written in [BENCHMARKS.md](../BENCHMARKS.md).
-- Tests: `docker compose run --rm --build api npm test` (small seed, no worker).
+- Part 1, bulk job, large seed, and measured 50k run.
+- README lists how to run, seed, test, and what is not implemented.
+- DESIGN.md matches the code, including health age and the worker's single connection.
 
 ---
 
 ## In Progress
 
-- Nothing. Next is M5 submission polish (README finish, DESIGN vs code, commit history), when you confirm.
+- Nothing. Submission write-up is done.
 
 ---
 
@@ -27,7 +26,7 @@
 
 ## Where We Left Off
 
-Session #5 seeded 500k and ran the three measurements. Numbers are in BENCHMARKS.md.
+Session #6 finished M5 polish. History is five commits. Do not squash. Do not push unless asked.
 
 ---
 
@@ -38,6 +37,7 @@ src/db/
 ├── seed.ts          # small seed (API boot + tests)
 ├── seed-large.ts    # 500k + 5 small workspaces
 └── bench.ts         # 50k wall-clock, interactive p95/p99, kill-resume
+src/worker.ts        # DATABASE_POOL_MAX defaults to 1
 ```
 
 ---
@@ -54,16 +54,7 @@ BENCH_API_URL=http://localhost:3000
 
 ## How to Run Locally
 
-```bash
-docker compose up --build
-# API + worker + Postgres
-
-docker compose run --rm --build api npm test
-# migrate, small seed, Jest; worker is not started
-
-DATABASE_URL=postgres://app:app@localhost:5432/opportunities npm run seed:large
-DATABASE_URL=postgres://app:app@localhost:5432/opportunities npm run bench
-```
+See [README.md](../README.md).
 
 ---
 
@@ -84,7 +75,7 @@ None.
 
 | Metric | Value |
 |---|---|
-| Total sessions | 5 |
-| Modules complete | Part 1 + bulk job + seed/measure |
+| Total sessions | 6 |
+| Modules complete | Part 1 + bulk job + seed/measure + polish |
 | Hard-property tests | 7 |
 | Last measured | 2026-10-31 (~2,300 rows/s on M4) |

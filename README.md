@@ -2,8 +2,6 @@
 
 HighLevel SDE-3 take-home. One hard operation: move up to 50,000 filtered opportunities to another stage as a background job that stays correct under retry, restart, and concurrent edits.
 
-**Problem:** [docs/THE-PROBLEM.md](docs/THE-PROBLEM.md)
-
 **Design:** [DESIGN.md](DESIGN.md)
 
 **Numbers:** [BENCHMARKS.md](BENCHMARKS.md)
@@ -15,6 +13,12 @@ HighLevel SDE-3 take-home. One hard operation: move up to 50,000 filtered opport
 - Large seed and measured 50k run (see BENCHMARKS.md)
 
 Tenant header is `X-Workspace-Id`.
+
+## What is not implemented
+
+Out of scope from the brief: any UI, real authentication, a board or pipeline summary, per-stage counts or value rollups, filtering beyond the bulk filter, downstream automation events, deployment / CI / Kubernetes, custom fields / contacts / notes / tasks, and a perfect error taxonomy.
+
+Also not in this submission — they are the ranked extra week in DESIGN.md: partition `opportunities` by workspace, an adaptive pause, a read replica, per-workspace chunk fairness, and a short same-body dedupe window.
 
 ## Run
 

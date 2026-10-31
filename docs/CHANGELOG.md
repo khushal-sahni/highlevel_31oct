@@ -29,6 +29,27 @@
 
 ## Sessions
 
+## Session #6 — 2026-10-31
+> Submission polish. No new product behavior.
+
+### Built
+- Nothing new in the product
+
+### Changed
+- README drops the gitignored problem-brief link and lists what is not implemented
+- DESIGN.md states how health age is computed
+- Worker process defaults `DATABASE_POOL_MAX` to 1
+- ROADMAP M5 complete
+
+### Fixed
+- `npm run start:worker` now matches the one-connection write-up
+
+### Deferred
+- Nothing
+
+### New Tech Debt
+- None
+
 ## Session #5 — 2026-10-31
 > Seed and measure.
 

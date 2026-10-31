@@ -4,6 +4,10 @@ import { AppModule } from './app.module';
 import { LoggerService } from './services/logger.service';
 import { BulkMoveWorker } from './workers/bulk-move.worker';
 
+if (process.env['DATABASE_POOL_MAX'] === undefined) {
+  process.env['DATABASE_POOL_MAX'] = '1';
+}
+
 class WorkerProcess {
   async start(): Promise<void> {
     const app = await NestFactory.createApplicationContext(AppModule);

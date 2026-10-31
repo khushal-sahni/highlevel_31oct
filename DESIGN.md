@@ -112,6 +112,8 @@ A small workspace’s bulk job also waits behind a 50,000-row job. That is the f
 - `health=stalled` — last committed chunk is older than 30s; status stays `running` / `resolving`
 - `failed` — terminal, and only for a snapshot over 50,000 (before any move) or 5 consecutive real chunk errors. Moves that already committed stay.
 
+`heartbeat_at` is written by the database clock on the chunk commit. Health age is `Date.now()` minus that timestamp when the poll is served.
+
 A queued job has no stall clock. A live worker claiming pending items is what clears a stall.
 
 ---

@@ -59,12 +59,12 @@ Done enough means Part 1 works, Part 2 holds all five properties, seed and bench
 - [x] Kill and resume: time to completion and proof of correctness
 - [x] Hardware and method written in `BENCHMARKS.md`
 
-### M5 — Submission polish `[ ]`
+### M5 — Submission polish `[x]`
 > Real history, runnable, honest about gaps.
 
-- [ ] Root `README.md`: how to run, seed, test, what is and is not implemented
-- [ ] `DESIGN.md` matches the code, including holes and the 10× failure
-- [ ] Commit history tells the story (not one squashed commit)
+- [x] Root `README.md`: how to run, seed, test, what is and is not implemented
+- [x] `DESIGN.md` matches the code, including holes and the 10× failure
+- [x] Commit history tells the story (not one squashed commit)
 - [x] Ranked "another week" list in `DESIGN.md`
 
 ---
