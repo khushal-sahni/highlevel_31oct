@@ -1,8 +1,8 @@
 import { OpportunityStatus } from '../types/opportunity-status';
 import { isOpportunityStatus } from '../types/opportunity-status';
 import { ValidationError } from '../errors/app.error';
+import { IJsonObject } from '../types/json';
 import {
-  requireRecord,
   requireSafeInteger,
   requireString,
   requireUuid,
@@ -17,22 +17,21 @@ export interface ICreateOpportunityInput {
 }
 
 export class CreateOpportunityDto {
-  static fromBody(body: unknown): ICreateOpportunityInput {
-    const record = requireRecord(body);
-    const status = requireString(record, 'status');
+  static fromBody(body: IJsonObject): ICreateOpportunityInput {
+    const status = requireString(body, 'status');
     if (!isOpportunityStatus(status)) {
       throw new ValidationError('status must be open, won, lost, or abandoned');
     }
-    const value = requireSafeInteger(record, 'value');
+    const value = requireSafeInteger(body, 'value');
     if (value < 0) {
       throw new ValidationError('value must be a non-negative integer');
     }
     return {
-      name: requireString(record, 'name'),
+      name: requireString(body, 'name'),
       value,
       status,
-      ownerId: requireString(record, 'ownerId'),
-      stageId: requireUuid(requireString(record, 'stageId'), 'stageId'),
+      ownerId: requireString(body, 'ownerId'),
+      stageId: requireUuid(requireString(body, 'stageId'), 'stageId'),
     };
   }
 }

@@ -1,12 +1,12 @@
 import { IBulkFilter } from '../entities/bulk-job';
 import { ValidationError } from '../errors/app.error';
+import { IJsonObject } from '../types/json';
 import { isOpportunityStatus, OpportunityStatus } from '../types/opportunity-status';
 import {
   optionalIsoDate,
   optionalSafeInteger,
   optionalString,
   optionalUuidField,
-  requireRecord,
   requireString,
   requireUuid,
 } from '../utils/parse';
@@ -17,20 +17,19 @@ export interface ICreateBulkMoveInput {
 }
 
 export class CreateBulkMoveDto {
-  static fromBody(body: unknown): ICreateBulkMoveInput {
-    const record = requireRecord(body);
-    const filter = CreateBulkMoveDto.parseFilter(record);
+  static fromBody(body: IJsonObject): ICreateBulkMoveInput {
+    const filter = CreateBulkMoveDto.parseFilter(body);
     CreateBulkMoveDto.assertHasFilter(filter);
     return {
       targetStageId: requireUuid(
-        requireString(record, 'targetStageId'),
+        requireString(body, 'targetStageId'),
         'targetStageId',
       ),
       filter,
     };
   }
 
-  private static parseFilter(record: Record<string, unknown>): IBulkFilter {
+  private static parseFilter(record: IJsonObject): IBulkFilter {
     return {
       stageId: optionalUuidField(record, 'stageId'),
       ownerId: optionalString(record, 'ownerId'),
@@ -43,7 +42,7 @@ export class CreateBulkMoveDto {
   }
 
   private static parseStatus(
-    record: Record<string, unknown>,
+    record: IJsonObject,
   ): OpportunityStatus | undefined {
     const status = optionalString(record, 'status');
     if (status === undefined) {
@@ -56,7 +55,7 @@ export class CreateBulkMoveDto {
   }
 
   private static optionalCents(
-    record: Record<string, unknown>,
+    record: IJsonObject,
     key: string,
   ): number | undefined {
     const value = optionalSafeInteger(record, key);

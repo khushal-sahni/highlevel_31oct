@@ -1,8 +1,9 @@
 import { IBulkFilter } from '../entities/bulk-job';
+import { SqlValue } from '../types/sql-value';
 
 export interface IFilterSql {
   readonly clause: string;
-  readonly values: unknown[];
+  readonly values: SqlValue[];
 }
 
 export function bulkFilterSql(

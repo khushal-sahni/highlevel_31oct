@@ -1,19 +1,17 @@
 import { ValidationError } from '../errors/app.error';
+import { IJsonObject, IJsonValue } from '../types/json';
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export function requireRecord(body: unknown): Record<string, unknown> {
+export function requireRecord(body: unknown): IJsonObject {
   if (body === null || typeof body !== 'object' || Array.isArray(body)) {
     throw new ValidationError('Request body must be an object');
   }
-  return body as Record<string, unknown>;
+  return body as IJsonObject;
 }
 
-export function requireString(
-  body: Record<string, unknown>,
-  key: string,
-): string {
+export function requireString(body: IJsonObject, key: string): string {
   const value = body[key];
   if (typeof value !== 'string' || value.trim().length === 0) {
     throw new ValidationError(`${key} must be a non-empty string`);
@@ -21,10 +19,7 @@ export function requireString(
   return value.trim();
 }
 
-export function requireSafeInteger(
-  body: Record<string, unknown>,
-  key: string,
-): number {
+export function requireSafeInteger(body: IJsonObject, key: string): number {
   const value = body[key];
   if (typeof value !== 'number' || !Number.isSafeInteger(value)) {
     throw new ValidationError(`${key} must be an integer`);
@@ -40,7 +35,7 @@ export function requireUuid(value: string, key: string): string {
 }
 
 export function optionalString(
-  query: Record<string, unknown>,
+  query: IJsonObject,
   key: string,
 ): string | undefined {
   const value = query[key];
@@ -54,7 +49,7 @@ export function optionalString(
 }
 
 export function optionalSafeInteger(
-  body: Record<string, unknown>,
+  body: IJsonObject,
   key: string,
 ): number | undefined {
   if (body[key] === undefined) {
@@ -64,7 +59,7 @@ export function optionalSafeInteger(
 }
 
 export function optionalUuidField(
-  body: Record<string, unknown>,
+  body: IJsonObject,
   key: string,
 ): string | undefined {
   const value = optionalString(body, key);
@@ -72,7 +67,7 @@ export function optionalUuidField(
 }
 
 export function optionalIsoDate(
-  body: Record<string, unknown>,
+  body: IJsonObject,
   key: string,
 ): Date | undefined {
   const value = optionalString(body, key);
@@ -84,4 +79,22 @@ export function optionalIsoDate(
     throw new ValidationError(`${key} must be an ISO date`);
   }
   return date;
+}
+
+export function queryString(
+  query: IJsonObject,
+  key: string,
+): string | undefined {
+  const value = query[key];
+  if (value === undefined) {
+    return undefined;
+  }
+  return requireQueryString(value, key);
+}
+
+function requireQueryString(value: IJsonValue, key: string): string {
+  if (typeof value !== 'string') {
+    throw new ValidationError(`${key} must be a string`);
+  }
+  return value;
 }

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 
-const DEFAULT_PORT = 3000;
+const DEFAULT_PORT = 3110;
 const DEFAULT_POOL_MAX = 10;
 const DEFAULT_MAX_BULK = 50_000;
 const DEFAULT_RESOLVE_PAGE = 2_000;

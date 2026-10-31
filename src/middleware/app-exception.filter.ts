@@ -26,7 +26,11 @@ export class AppExceptionFilter implements ExceptionFilter {
         .json({ error: exception.message, code: 'HTTP' });
       return;
     }
-    this.logger.error('Unhandled error', exception);
+    if (exception instanceof Error) {
+      this.logger.error('Unhandled error', exception);
+    } else {
+      this.logger.error('Unhandled error');
+    }
     response.status(500).json({ error: 'Internal server error', code: 'INTERNAL' });
   }
 }

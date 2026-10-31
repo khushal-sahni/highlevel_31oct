@@ -8,11 +8,11 @@ export class LoggerService {
     this.logger.log(message);
   }
 
-  error(message: string, error?: unknown): void {
-    if (error instanceof Error) {
-      this.logger.error(message, error.stack);
+  error(message: string, error?: Error): void {
+    if (error === undefined) {
+      this.logger.error(message);
       return;
     }
-    this.logger.error(message);
+    this.logger.error(message, error.stack);
   }
 }

@@ -1,13 +1,23 @@
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { WorkspaceId } from '../decorators/workspace-id.decorator';
-import { CreateOpportunityDto } from '../dtos/create-opportunity.dto';
-import { ListOpportunitiesDto } from '../dtos/list-opportunities.dto';
-import { MoveOpportunityDto } from '../dtos/move-opportunity.dto';
+import {
+  CreateOpportunityDto,
+  ICreateOpportunityInput,
+} from '../dtos/create-opportunity.dto';
+import {
+  IListOpportunitiesQuery,
+  ListOpportunitiesDto,
+} from '../dtos/list-opportunities.dto';
+import {
+  IMoveOpportunityInput,
+  MoveOpportunityDto,
+} from '../dtos/move-opportunity.dto';
 import {
   IOpportunityListResponse,
   IOpportunityResponse,
   toOpportunityResponse,
 } from '../dtos/opportunity-response.dto';
+import { ParseDtoPipe } from '../pipes/parse-dto.pipe';
 import { OpportunityService } from '../services/opportunity.service';
 import { requireUuid } from '../utils/parse';
 
@@ -18,12 +28,10 @@ export class OpportunityController {
   @Post()
   async create(
     @WorkspaceId() workspaceId: string,
-    @Body() body: unknown,
+    @Body(new ParseDtoPipe(CreateOpportunityDto.fromBody))
+    body: ICreateOpportunityInput,
   ): Promise<IOpportunityResponse> {
-    const created = await this.opportunities.create(
-      workspaceId,
-      CreateOpportunityDto.fromBody(body),
-    );
+    const created = await this.opportunities.create(workspaceId, body);
     return toOpportunityResponse(created);
   }
 
@@ -31,12 +39,13 @@ export class OpportunityController {
   async moveStage(
     @WorkspaceId() workspaceId: string,
     @Param('id') id: string,
-    @Body() body: unknown,
+    @Body(new ParseDtoPipe(MoveOpportunityDto.fromBody))
+    body: IMoveOpportunityInput,
   ): Promise<IOpportunityResponse> {
     const moved = await this.opportunities.moveStage(
       workspaceId,
       requireUuid(id, 'id'),
-      MoveOpportunityDto.fromBody(body),
+      body,
     );
     return toOpportunityResponse(moved);
   }
@@ -44,12 +53,10 @@ export class OpportunityController {
   @Get()
   async list(
     @WorkspaceId() workspaceId: string,
-    @Query() query: Record<string, unknown>,
+    @Query(new ParseDtoPipe(ListOpportunitiesDto.fromQuery))
+    query: IListOpportunitiesQuery,
   ): Promise<IOpportunityListResponse> {
-    const page = await this.opportunities.listByStage(
-      workspaceId,
-      ListOpportunitiesDto.fromQuery(query),
-    );
+    const page = await this.opportunities.listByStage(workspaceId, query);
     return {
       items: page.items.map((item) => toOpportunityResponse(item)),
       nextCursor: page.nextCursor,

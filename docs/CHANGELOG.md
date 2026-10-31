@@ -29,6 +29,27 @@
 
 ## Sessions
 
+## Session #7 — 2026-10-31
+> Type the JSON boundary. No new product behavior.
+
+### Built
+- `ParseDtoPipe` so controllers receive parsed input types
+- `IJsonObject` and `SqlValue`
+
+### Changed
+- HTTP bodies and queries are typed after the pipe
+- SQL binds use `SqlValue`
+- Logger takes `Error`; catch sites pass it only after `instanceof Error`
+
+### Fixed
+- Controllers no longer annotate raw JSON as the handler type
+
+### Deferred
+- Nothing
+
+### New Tech Debt
+- None
+
 ## Session #6 — 2026-10-31
 > Submission polish. No new product behavior.
 

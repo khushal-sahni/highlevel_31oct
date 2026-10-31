@@ -45,7 +45,11 @@ export class BulkMoveWorker {
     try {
       return await this.step();
     } catch (error: unknown) {
-      this.logger.error('worker step failed', error);
+      if (error instanceof Error) {
+        this.logger.error('worker step failed', error);
+      } else {
+        this.logger.error('worker step failed');
+      }
       return false;
     }
   }

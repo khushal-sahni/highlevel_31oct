@@ -1,5 +1,6 @@
-import { optionalString, requireUuid } from '../utils/parse';
 import { ValidationError } from '../errors/app.error';
+import { IJsonObject } from '../types/json';
+import { optionalString, queryString, requireUuid } from '../utils/parse';
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
@@ -11,24 +12,24 @@ export interface IListOpportunitiesQuery {
 }
 
 export class ListOpportunitiesDto {
-  static fromQuery(query: Record<string, unknown>): IListOpportunitiesQuery {
+  static fromQuery(query: IJsonObject): IListOpportunitiesQuery {
     const stageId = optionalString(query, 'stageId');
     if (stageId === undefined) {
       throw new ValidationError('stageId is required');
     }
     return {
       stageId: requireUuid(stageId, 'stageId'),
-      limit: ListOpportunitiesDto.parseLimit(query['limit']),
-      cursor: ListOpportunitiesDto.parseCursor(query['cursor']),
+      limit: ListOpportunitiesDto.parseLimit(queryString(query, 'limit')),
+      cursor: ListOpportunitiesDto.parseCursor(queryString(query, 'cursor')),
     };
   }
 
-  private static parseLimit(raw: unknown): number {
-    if (raw === undefined) {
+  private static parseLimit(raw: string | undefined): number {
+    if (raw === undefined || raw === '') {
       return DEFAULT_LIMIT;
     }
-    const value = typeof raw === 'string' ? Number.parseInt(raw, 10) : raw;
-    if (typeof value !== 'number' || !Number.isInteger(value)) {
+    const value = Number.parseInt(raw, 10);
+    if (!Number.isInteger(value)) {
       throw new ValidationError('limit must be an integer');
     }
     if (value < 1 || value > MAX_LIMIT) {
@@ -37,12 +38,9 @@ export class ListOpportunitiesDto {
     return value;
   }
 
-  private static parseCursor(raw: unknown): string | undefined {
+  private static parseCursor(raw: string | undefined): string | undefined {
     if (raw === undefined || raw === '') {
       return undefined;
-    }
-    if (typeof raw !== 'string') {
-      throw new ValidationError('cursor must be a UUID');
     }
     return requireUuid(raw, 'cursor');
   }

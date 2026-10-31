@@ -13,8 +13,12 @@ import {
   IBulkJobResponse,
   toBulkJobResponse,
 } from '../dtos/bulk-job-response.dto';
-import { CreateBulkMoveDto } from '../dtos/create-bulk-move.dto';
+import {
+  CreateBulkMoveDto,
+  ICreateBulkMoveInput,
+} from '../dtos/create-bulk-move.dto';
 import { ValidationError } from '../errors/app.error';
+import { ParseDtoPipe } from '../pipes/parse-dto.pipe';
 import { BulkMoveService } from '../services/bulk-move.service';
 import { requireUuid } from '../utils/parse';
 
@@ -30,14 +34,11 @@ export class BulkMoveController {
   async enqueue(
     @WorkspaceId() workspaceId: string,
     @Headers('idempotency-key') idempotencyKey: string | undefined,
-    @Body() body: unknown,
+    @Body(new ParseDtoPipe(CreateBulkMoveDto.fromBody))
+    body: ICreateBulkMoveInput,
   ): Promise<IBulkJobResponse> {
     const key = BulkMoveController.requireKey(idempotencyKey);
-    const view = await this.bulkMoves.enqueue(
-      workspaceId,
-      key,
-      CreateBulkMoveDto.fromBody(body),
-    );
+    const view = await this.bulkMoves.enqueue(workspaceId, key, body);
     return toBulkJobResponse(view.job, view.counts, this.config.heartbeatStaleMs);
   }
 

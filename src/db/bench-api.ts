@@ -12,6 +12,11 @@ export interface ILatencySample {
   readonly ms: number;
 }
 
+interface IMoveStageBody {
+  readonly stageId: string;
+  readonly expectedVersion: number;
+}
+
 export class BenchApi {
   constructor(
     private readonly baseUrl: string,
@@ -89,7 +94,7 @@ export class BenchApi {
     readonly method: string;
     readonly path: string;
     readonly workspaceId: string;
-    readonly body?: unknown;
+    readonly body?: Record<string, string> | IMoveStageBody;
     readonly idempotencyKey?: string;
   }): Promise<Response> {
     const headers: Record<string, string> = {

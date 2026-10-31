@@ -1,5 +1,5 @@
+import { IJsonObject } from '../types/json';
 import {
-  requireRecord,
   requireSafeInteger,
   requireString,
   requireUuid,
@@ -12,14 +12,13 @@ export interface IMoveOpportunityInput {
 }
 
 export class MoveOpportunityDto {
-  static fromBody(body: unknown): IMoveOpportunityInput {
-    const record = requireRecord(body);
-    const expectedVersion = requireSafeInteger(record, 'expectedVersion');
+  static fromBody(body: IJsonObject): IMoveOpportunityInput {
+    const expectedVersion = requireSafeInteger(body, 'expectedVersion');
     if (expectedVersion < 1) {
       throw new ValidationError('expectedVersion must be at least 1');
     }
     return {
-      stageId: requireUuid(requireString(record, 'stageId'), 'stageId'),
+      stageId: requireUuid(requireString(body, 'stageId'), 'stageId'),
       expectedVersion,
     };
   }
