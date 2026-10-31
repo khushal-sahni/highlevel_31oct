@@ -52,3 +52,36 @@ export function optionalString(
   }
   return value.trim();
 }
+
+export function optionalSafeInteger(
+  body: Record<string, unknown>,
+  key: string,
+): number | undefined {
+  if (body[key] === undefined) {
+    return undefined;
+  }
+  return requireSafeInteger(body, key);
+}
+
+export function optionalUuidField(
+  body: Record<string, unknown>,
+  key: string,
+): string | undefined {
+  const value = optionalString(body, key);
+  return value === undefined ? undefined : requireUuid(value, key);
+}
+
+export function optionalIsoDate(
+  body: Record<string, unknown>,
+  key: string,
+): Date | undefined {
+  const value = optionalString(body, key);
+  if (value === undefined) {
+    return undefined;
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    throw new ValidationError(`${key} must be an ISO date`);
+  }
+  return date;
+}

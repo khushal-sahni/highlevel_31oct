@@ -52,6 +52,7 @@ export interface ITransition {
   readonly opportunityId: string;
   readonly fromStageId: string;
   readonly toStageId: string;
+  readonly jobId: string | null;
   readonly createdAt: Date;
 }
 
@@ -61,5 +62,6 @@ export interface ITransitionRow {
   readonly opportunity_id: string;
   readonly from_stage_id: string;
   readonly to_stage_id: string;
+  readonly job_id: string | null;
   readonly created_at: Date;
 }

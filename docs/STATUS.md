@@ -1,34 +1,36 @@
 # STATUS.md
 > Weekend dashboard. Read this first. Update this last.
-> Last updated: 2026-10-31 | Session: #3
+> Last updated: 2026-10-31 | Session: #4
 
 ---
 
 ## What Works Right Now
 
 - Part 1 API: create, versioned single move + transition, keyset list-by-stage.
-- `X-Workspace-Id` required; unknown workspace is 404.
-- Stale `expectedVersion` is 409 and writes no transition.
-- Five integration tests against Postgres.
-- Dev seed: one workspace and six stages.
+- Bulk job: `POST /bulk-stage-moves` returns 202; worker resolves a snapshot and applies chunks.
+- Idempotency-Key stored in Postgres; same key + body returns the original job.
+- Resume is pending item rows. Progress is item counts. Health is heartbeat-based.
+- Manual move after resolve wins (`conflict` skip). Deals created after the job are not copied.
+- Snapshot over 50,000 fails before any move. One active job per workspace; others stay queued.
+- Twelve integration tests against Postgres (five Part 1, seven bulk safeties).
 
 ---
 
 ## In Progress
 
-- Nothing. Next is the bulk job (M3), when you confirm scope.
+- Nothing. Next is M4: 500k seed and benchmarks, when you confirm scope.
 
 ---
 
 ## Known Broken / Blocked
 
-- `docker compose up --build` failed on this machine because host port 3000 is already taken. The image builds. Map a free host port if 3000 is busy.
+- Host port 3000 can be taken; compose still publishes 3000.
 
 ---
 
 ## Where We Left Off
 
-Session #3 shipped Part 1. No bulk job, no job tables, no 500k seed. Next step: enqueue + worker + the five safety properties.
+Session #4 shipped the bulk job. No 500k seed, no `BENCHMARKS.md`. Next step: seed + measure.
 
 ---
 
@@ -36,15 +38,15 @@ Session #3 shipped Part 1. No bulk job, no job tables, no 500k seed. Next step: 
 
 ```
 src/
-├── controllers/     # OpportunityController
-├── services/        # OpportunityService, LoggerService
-├── repositories/    # workspace, stage, opportunity, transition
-├── middleware/      # WorkspaceMiddleware, AppExceptionFilter
+├── controllers/     # OpportunityController, BulkMoveController
+├── services/        # OpportunityService, BulkMoveService
+├── repositories/    # opportunities, jobs, items, transitions
+├── workers/         # BulkMoveEngine, BulkMoveWorker
 ├── db/              # pool, migrate, seed
-└── workers/         # not started
+└── worker.ts        # worker process entry
 ```
 
-Two processes later. Only the API process exists.
+Two processes: API and worker. PostgreSQL is the store and the queue.
 
 ---
 
@@ -53,11 +55,15 @@ Two processes later. Only the API process exists.
 ```env
 DATABASE_URL=postgres://app:app@localhost:5432/opportunities
 PORT=3000
+DATABASE_POOL_MAX=10
+MAX_BULK_MOVE_SIZE=50000
+APPLY_CHUNK_SIZE=200
+CHUNK_PAUSE_MS=50
 ```
 
-Dev seed workspace: `11111111-1111-4111-8111-111111111111`
+Dev workspace: `11111111-1111-4111-8111-111111111111`
 
-New Lead stage: `22222222-2222-4222-8222-000000000001`
+New Lead: `22222222-2222-4222-8222-000000000001`
 
 ---
 
@@ -65,9 +71,8 @@ New Lead stage: `22222222-2222-4222-8222-000000000001`
 
 ```bash
 docker compose up --build
-# API :3000, Postgres :5432, migrations + tiny seed on boot
+# API :3000, worker, Postgres :5432
 
-# tests (Postgres must be up)
 DATABASE_URL=postgres://app:app@localhost:5432/opportunities npm test
 ```
 
@@ -75,14 +80,14 @@ DATABASE_URL=postgres://app:app@localhost:5432/opportunities npm test
 
 ## Tech Debt
 
-- Host port 3000 can collide; compose still publishes 3000.
+- Host port 3000 can collide.
 - Known design holes (accepted): one shared Postgres, one global in-flight chunk, new-key idempotency slip-through.
 
 ---
 
 ## Open Questions
 
-None on Part 1. Bulk job mechanics stay as in [DESIGN.md](../DESIGN.md).
+None on the job mechanics.
 
 ---
 
@@ -90,7 +95,7 @@ None on Part 1. Bulk job mechanics stay as in [DESIGN.md](../DESIGN.md).
 
 | Metric | Value |
 |---|---|
-| Total sessions | 3 |
-| Modules complete | Part 1 |
-| Hard-property tests | None yet (Part 1 only) |
+| Total sessions | 4 |
+| Modules complete | Part 1 + bulk job |
+| Hard-property tests | 7 |
 | Last measured | Never |

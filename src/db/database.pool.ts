@@ -8,7 +8,19 @@ export class DatabasePool implements IQueryClient, OnModuleDestroy {
   private readonly pool: Pool;
 
   constructor(config: AppConfig) {
-    this.pool = new Pool({ connectionString: config.databaseUrl });
+    this.pool = new Pool({
+      connectionString: config.databaseUrl,
+      max: config.databasePoolMax,
+    });
+  }
+
+  async withClient<T>(fn: (client: PoolClient) => Promise<T>): Promise<T> {
+    const client = await this.pool.connect();
+    try {
+      return await fn(client);
+    } finally {
+      client.release();
+    }
   }
 
   async query<T extends QueryResultRow>(

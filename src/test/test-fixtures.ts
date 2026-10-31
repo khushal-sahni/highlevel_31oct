@@ -24,6 +24,14 @@ export class TestFixtures {
       name: 'Contacted',
       position: 2,
     });
-    return { workspaceId: workspace.id, stageIds: [first.id, second.id] };
+    const third = await this.stages.insert({
+      workspaceId: workspace.id,
+      name: 'Qualified',
+      position: 3,
+    });
+    return {
+      workspaceId: workspace.id,
+      stageIds: [first.id, second.id, third.id],
+    };
   }
 }

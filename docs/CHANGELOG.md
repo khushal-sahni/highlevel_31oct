@@ -29,6 +29,30 @@
 
 ## Sessions
 
+## Session #4 — 2026-10-31
+> Bulk job. No 500k seed.
+
+### Built
+- `bulk_jobs` and `bulk_move_items`; `transitions.job_id`
+- `POST /bulk-stage-moves` and `GET /bulk-stage-moves/:id`
+- Worker process: resolve pages, apply chunks, advisory lock, 50ms pause
+- Seven hard-property tests: idempotency, resume, collision, snapshot, cap, queue, stalled health
+- Compose `worker` service
+
+### Changed
+- `transitions` insert accepts optional `job_id`
+- README documents the two bulk routes and the worker
+
+### Fixed
+- Nothing carried from Part 1
+
+### Deferred
+- 500k seed and `BENCHMARKS.md` — M4
+- Full submission README polish
+
+### New Tech Debt
+- None beyond accepted design holes
+
 ## Session #3 — 2026-10-31
 > Part 1 foundation. No bulk job.
 

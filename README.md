@@ -8,9 +8,13 @@ HighLevel SDE-3 take-home. One hard operation: move up to 50,000 filtered opport
 
 ## What works
 
-Part 1 only: create an opportunity, move one opportunity with a version check and a transition, list a stage with a keyset cursor. Tenant header is `X-Workspace-Id`.
+Part 1: create an opportunity, move one opportunity with a version check and a transition, list a stage with a keyset cursor.
 
-The bulk job is not implemented yet.
+Part 2: `POST /bulk-stage-moves` (requires `Idempotency-Key`) returns 202. A worker resolves a snapshot and applies chunks. `GET /bulk-stage-moves/:id` reports committed counts and health.
+
+Not implemented: 500k seed, benchmarks.
+
+Tenant header is `X-Workspace-Id`.
 
 ## Run
 
@@ -18,7 +22,7 @@ The bulk job is not implemented yet.
 docker compose up --build
 ```
 
-API listens on port 3000. Postgres is on 5432. Migrations and a tiny seed run on boot.
+API on port 3000, worker in a second container, Postgres on 5432. Migrations and a tiny seed run on API boot.
 
 Dev workspace: `11111111-1111-4111-8111-111111111111`
 

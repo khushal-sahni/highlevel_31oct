@@ -67,6 +67,24 @@ export class OpportunityRepository {
     return row === undefined ? null : mapOpportunity(row);
   }
 
+  async findByIds(
+    workspaceId: string,
+    ids: readonly string[],
+    client: IQueryClient = this.db,
+  ): Promise<IOpportunity[]> {
+    if (ids.length === 0) {
+      return [];
+    }
+    const result = await client.query<IOpportunityRow>(
+      `SELECT id, workspace_id, stage_id, name, value::text, status,
+              owner_id, version, stage_changed_at, created_at, updated_at
+       FROM opportunities
+       WHERE workspace_id = $1 AND id = ANY($2::uuid[])`,
+      [workspaceId, ids],
+    );
+    return result.rows.map((row) => mapOpportunity(row));
+  }
+
   async listByStage(options: IListByStageOptions): Promise<IOpportunity[]> {
     const result = await this.db.query<IOpportunityRow>(
       `SELECT id, workspace_id, stage_id, name, value::text, status,

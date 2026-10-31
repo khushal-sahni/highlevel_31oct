@@ -36,18 +36,18 @@ Done enough means Part 1 works, Part 2 holds all five properties, seed and bench
 - [x] List opportunities in a stage, simple pagination
 - [x] One command that boots the app on a clean machine
 
-### M3 — Bulk job (Part 2) `[ ]`
+### M3 — Bulk job (Part 2) `[x]`
 > This is the exercise.
 
-- [ ] Enqueue a filtered bulk move (stage, owner, status, value range, date range) and return a job handle immediately
-- [ ] Worker processes in the background; HTTP does not loop the set
-- [ ] Idempotent: durable dedupe that survives restart
-- [ ] Resumable: kill mid-job, resume, finish correctly
-- [ ] Progress from committed state; slow vs stuck vs failed
-- [ ] Concurrent-edit collision implemented and defended
-- [ ] Snapshot vs live stated and implemented
-- [ ] Isolation mechanism implemented (same workspace interactive, other workspaces untouched)
-- [ ] Tests that fail if those safeties are removed
+- [x] Enqueue a filtered bulk move (stage, owner, status, value range, date range) and return a job handle immediately
+- [x] Worker processes in the background; HTTP does not loop the set
+- [x] Idempotent: durable dedupe that survives restart
+- [x] Resumable: kill mid-job, resume, finish correctly
+- [x] Progress from committed state; slow vs stuck vs failed
+- [x] Concurrent-edit collision implemented and defended
+- [x] Snapshot vs live stated and implemented
+- [x] Isolation mechanism implemented (same workspace interactive, other workspaces untouched)
+- [x] Tests that fail if those safeties are removed
 
 ### M4 — Seed and measure `[ ]`
 > They will try to reproduce these numbers.

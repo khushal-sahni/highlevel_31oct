@@ -23,3 +23,13 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+
+  worker:
+    build: .
+    command: ["sh", "-c", "node dist/db/migrate.js && node dist/worker.js"]
+    environment:
+      DATABASE_URL: postgres://app:app@postgres:5432/opportunities
+      DATABASE_POOL_MAX: "1"
+    depends_on:
+      postgres:
+        condition: service_healthy
