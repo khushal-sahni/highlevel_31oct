@@ -10,7 +10,6 @@
 - README lists how to run, seed, test, and what is not implemented.
 - DESIGN.md matches the code, including health age and the worker's single connection. Mermaid diagrams in DESIGN.md show the two processes, job states, worker step, idempotency, collisions, the snapshot, and health.
 - Controller handlers take parsed input types. `unknown` remains only on catch values, pg error guards, the JSON guard, and the parse pipe.
-
 ---
 
 ## In Progress
@@ -27,7 +26,7 @@
 
 ## Where We Left Off
 
-Session #7 typed the JSON boundary. History is five commits plus uncommitted write-up and type work. Do not squash. Do not push unless asked.
+Session #7 typed the JSON boundary. History is five commits plus uncommitted write-up. Do not squash. Do not push unless asked.
 
 ---
 
