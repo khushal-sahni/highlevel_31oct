@@ -1,3 +1,5 @@
+import { fork, ChildProcess } from 'child_process';
+import { join } from 'path';
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
@@ -145,6 +147,46 @@ describe('BulkMoveWorker', () => {
     expect(await transitions.countForJob(job.id)).toBe(0);
   });
 
+  it('should return 429 when a workspace already has 8 open jobs', async () => {
+    const ws = await fixtures.createWorkspaceWithStages();
+    await createDeal(app, ws, 'Cap');
+    for (let i = 0; i < 8; i += 1) {
+      await enqueue(app, ws, `open-${i}`, stageId(ws, 0), stageId(ws, 1));
+    }
+    await request(app.getHttpServer())
+      .post('/bulk-stage-moves')
+      .set(headers(ws.workspaceId, 'open-8'))
+      .send({ stageId: stageId(ws, 0), targetStageId: stageId(ws, 1) })
+      .expect(429);
+    const replay = await enqueue(app, ws, 'open-0', stageId(ws, 0), stageId(ws, 1));
+    expect(replay.id).toBeDefined();
+    await pool.query(
+      `UPDATE bulk_jobs SET status = $2
+       WHERE workspace_id = $1 AND status IN ($3, $4, $5)`,
+      [
+        ws.workspaceId,
+        JobStatus.FAILED,
+        JobStatus.QUEUED,
+        JobStatus.RESOLVING,
+        JobStatus.RUNNING,
+      ],
+    );
+  });
+
+  it('should let two worker processes take two workspaces at once', async () => {
+    const first = await fixtures.createWorkspaceWithStages();
+    const second = await fixtures.createWorkspaceWithStages();
+    await createDeal(app, first, 'A');
+    await createDeal(app, second, 'B');
+    const jobA = await enqueue(app, first, 'fair-a', stageId(first, 0), stageId(first, 1));
+    const jobB = await enqueue(app, second, 'fair-b', stageId(second, 0), stageId(second, 1));
+    await runForkedSteps();
+    const left = await getJob(app, first, jobA.id);
+    const right = await getJob(app, second, jobB.id);
+    expect(left.status).not.toBe(JobStatus.QUEUED);
+    expect(right.status).not.toBe(JobStatus.QUEUED);
+  });
+
   it('should keep a second job queued while one is active', async () => {
     const ws = await fixtures.createWorkspaceWithStages();
     await createDeal(app, ws, 'Queued');
@@ -153,7 +195,7 @@ describe('BulkMoveWorker', () => {
     await worker.step();
     const active = await getJob(app, ws, first.id);
     const waiting = await getJob(app, ws, second.id);
-    expect(active.status).toBe(JobStatus.RESOLVING);
+    expect([JobStatus.RESOLVING, JobStatus.RUNNING]).toContain(active.status);
     expect(waiting.status).toBe(JobStatus.QUEUED);
     expect(waiting.health).toBeNull();
     await runUntil(worker, app, ws, first.id, [JobStatus.COMPLETED]);
@@ -260,6 +302,56 @@ async function createDeals(
   for (const name of names) {
     await createDeal(app, ws, name);
   }
+}
+
+async function runForkedSteps(): Promise<void> {
+  const children = await Promise.all([forkOneStep(), forkOneStep()]);
+  for (const child of children) {
+    child.send({ go: true });
+  }
+  await Promise.all(children.map((child) => waitForExit(child)));
+}
+
+function forkOneStep(): Promise<ChildProcess> {
+  return new Promise((resolve, reject) => {
+    let ready = false;
+    const child = fork(join(__dirname, 'worker-one-step.ts'), [], {
+      execArgv: ['-r', 'ts-node/register/transpile-only'],
+      env: { ...process.env, DATABASE_POOL_MAX: '1', CHUNK_PAUSE_MS: '0' },
+    });
+    child.on('message', (message: unknown) => {
+      if (ready || !isReady(message)) {
+        return;
+      }
+      ready = true;
+      resolve(child);
+    });
+    child.once('error', reject);
+    child.once('exit', (code) => {
+      if (!ready) {
+        reject(new Error(`one-step worker exited ${code}`));
+      }
+    });
+  });
+}
+
+function isReady(message: unknown): boolean {
+  if (typeof message !== 'object' || message === null) {
+    return false;
+  }
+  return 'ready' in message;
+}
+
+function waitForExit(child: ChildProcess): Promise<void> {
+  return new Promise((resolve, reject) => {
+    child.once('exit', (code) => {
+      if (code === 0) {
+        resolve();
+        return;
+      }
+      reject(new Error(`one-step worker exited ${code}`));
+    });
+  });
 }
 
 async function runUntil(

@@ -61,43 +61,83 @@ export class BulkJobRepository {
     return row === undefined ? null : mapBulkJob(row);
   }
 
-  async findActiveForWork(client: IQueryClient): Promise<IBulkJob | null> {
+  async countOpen(workspaceId: string): Promise<number> {
+    const result = await this.db.query<{ count: string }>(
+      `SELECT COUNT(*)::text AS count FROM bulk_jobs
+       WHERE workspace_id = $1 AND status IN ($2, $3, $4)`,
+      [
+        workspaceId,
+        JobStatus.QUEUED,
+        JobStatus.RESOLVING,
+        JobStatus.RUNNING,
+      ],
+    );
+    return Number.parseInt(requireRow(result.rows[0], 'count open jobs').count, 10);
+  }
+
+  async claimActiveForWork(client: IQueryClient): Promise<IBulkJob | null> {
     const result = await client.query<IBulkJobRow>(
       `SELECT ${JOB_COLUMNS} FROM bulk_jobs
        WHERE status IN ($1, $2)
-       ORDER BY created_at
-       LIMIT 1`,
+       ORDER BY heartbeat_at NULLS FIRST, created_at
+       LIMIT 1
+       FOR UPDATE SKIP LOCKED`,
       [JobStatus.RESOLVING, JobStatus.RUNNING],
     );
     const row = result.rows[0];
     return row === undefined ? null : mapBulkJob(row);
   }
 
-  async promoteNext(client: IQueryClient): Promise<boolean> {
+  async promoteNext(client: IQueryClient): Promise<IBulkJob | null> {
     try {
-      const result = await client.query(
-        `UPDATE bulk_jobs j
-         SET status = $1, heartbeat_at = now(), updated_at = now()
-         WHERE j.id = (
-           SELECT q.id FROM bulk_jobs q
-           WHERE q.status = $2
-             AND NOT EXISTS (
-               SELECT 1 FROM bulk_jobs a
-               WHERE a.workspace_id = q.workspace_id
-                 AND a.status IN ($1, $3)
-             )
-           ORDER BY q.created_at
-           LIMIT 1
-         )`,
-        [JobStatus.RESOLVING, JobStatus.QUEUED, JobStatus.RUNNING],
-      );
-      return (result.rowCount ?? 0) > 0;
+      const id = await this.pickQueuedJob(client);
+      if (id === null) {
+        return null;
+      }
+      return this.markPromoted(client, id);
     } catch (error: unknown) {
       if (isUniqueViolation(error)) {
-        return false;
+        return null;
       }
       throw error;
     }
+  }
+
+  private async pickQueuedJob(client: IQueryClient): Promise<string | null> {
+    const picked = await client.query<{ id: string }>(
+      `SELECT j.id FROM bulk_jobs j
+       JOIN (
+         SELECT DISTINCT ON (q.workspace_id) q.id
+         FROM bulk_jobs q
+         WHERE q.status = $1
+           AND NOT EXISTS (
+             SELECT 1 FROM bulk_jobs a
+             WHERE a.workspace_id = q.workspace_id
+               AND a.status IN ($2, $3)
+           )
+         ORDER BY q.workspace_id, q.created_at
+       ) c ON c.id = j.id
+       ORDER BY j.created_at
+       LIMIT 1
+       FOR UPDATE OF j SKIP LOCKED`,
+      [JobStatus.QUEUED, JobStatus.RESOLVING, JobStatus.RUNNING],
+    );
+    return picked.rows[0]?.id ?? null;
+  }
+
+  private async markPromoted(
+    client: IQueryClient,
+    jobId: string,
+  ): Promise<IBulkJob | null> {
+    const result = await client.query<IBulkJobRow>(
+      `UPDATE bulk_jobs
+       SET status = $2, heartbeat_at = now(), updated_at = now()
+       WHERE id = $1
+       RETURNING ${JOB_COLUMNS}`,
+      [jobId, JobStatus.RESOLVING],
+    );
+    const row = result.rows[0];
+    return row === undefined ? null : mapBulkJob(row);
   }
 
   async markResolvingProgress(

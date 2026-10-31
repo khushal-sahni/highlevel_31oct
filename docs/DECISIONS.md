@@ -58,10 +58,17 @@ Use this format for each decision:
 
 ### One chunk in flight globally
 - **Date**: 2026-10-31
-- **Status**: Accepted
+- **Status**: Superseded by "One chunk per workspace under a global ceiling"
 - **Context**: The job must not starve interactive requests in the same workspace, and must not affect other workspaces. Chunks of 200 keep transactions short. They do not stop a busy worker from taking the pool and the disk.
-- **Decision**: The worker is its own process with one database connection. One chunk is in flight in the whole system, held by a Postgres advisory lock only for the duration of that chunk. Lock timeout is 250ms; that wait is a yield, not one of the five fatal errors. One `resolving` or `running` job per workspace; a second job stays `queued`, and queued is not stalled. Between chunks the worker sleeps 50ms outside the transaction. Every statement is scoped by `workspace_id`. No Redis or Kafka.
-- **Consequences**: A small workspace's bulk job waits behind a 50,000-row job. The hole: it is still one Postgres, so WAL and cache traffic from the big workspace can nudge latency elsewhere. Fairness and a replica are on the extra-week list.
+- **Decision**: The worker is its own process with one database connection. One chunk is in flight in the whole system, held by a Postgres advisory lock only for the duration of that chunk.
+- **Consequences**: A small workspace's bulk job waits behind a 50,000-row job.
+
+### One chunk per workspace under a global ceiling
+- **Date**: 2026-10-31
+- **Status**: Accepted
+- **Context**: A single global lane serializes every tenant. The brief asked for a concurrency cap, not one worker for the whole database. Arrival rate is not the scarce resource; worker slots are.
+- **Decision**: Each worker process has one connection and takes one of `MAX_IN_FLIGHT_CHUNKS` permits (default 4) for a single chunk. It claims a `resolving` or `running` job with `FOR UPDATE SKIP LOCKED`, oldest `heartbeat_at` first, or promotes the oldest queued job in a workspace that has no active job. One active job per workspace. At most 8 jobs that are not `completed` or `failed`; the next POST is 429. Lock timeout 250ms is a yield. 50ms pause outside the transaction. No Redis or Kafka. No paid tiers; every workspace has the same weight.
+- **Consequences**: Two worker processes can move two tenants at once. A noisy tenant cannot occupy every slot. The hole: it is still one Postgres, so WAL and cache traffic can nudge another tenant. BENCHMARKS.md is still the N=1 run.
 
 ### NestJS, TypeScript, node-postgres
 - **Date**: 2026-10-31
@@ -88,7 +95,7 @@ Use this format for each decision:
 - **Date**: 2026-10-31
 - **Status**: Accepted
 - **Context**: The brief asks what we would do with another week, ranked. Skip reasons are part of this submission, not the extra week.
-- **Decision**: (1) Partition `opportunities` by `workspace_id`. (2) Adaptive pause once benchmarks show interactive latency climbing. (3) A read replica for list-by-stage only if those numbers show the cache hole; progress reads stay on the primary. (4) One in-flight chunk per workspace under a global ceiling. (5) A short same-body dedupe window for clients that retry with a new `Idempotency-Key`. Redis, Kafka, UI, auth, and extra CRM endpoints stay off the list.
+- **Decision**: (1) Partition `opportunities` by `workspace_id`. (2) Adaptive pause once benchmarks show interactive latency climbing. (3) A read replica for list-by-stage only if those numbers show the cache hole; progress reads stay on the primary. (4) A short same-body dedupe window for clients that retry with a new `Idempotency-Key`. One in-flight chunk per workspace under a global ceiling is in this submission. Redis, Kafka, UI, auth, and extra CRM endpoints stay off the list.
 - **Consequences**: The write-up can name the hole we are shipping and the order we would close it.
 
 ### Numbered SQL migrations and a custom runner
@@ -109,5 +116,5 @@ Use this format for each decision:
 - **Date**: 2026-10-31
 - **Status**: Accepted
 - **Context**: Behavior was chosen. A client, a test, and the benchmark need one surface.
-- **Decision**: Every route requires `X-Workspace-Id`. Unknown workspace is 404. No stage API and no workspace API; stages are seeded rows. `POST /opportunities` takes name, value in integer cents, status, `ownerId`, `stageId`, and returns the row including `version`. `POST /opportunities/:id/stage` takes `stageId` and `expectedVersion`; a stale version is 409 and writes nothing. `GET /opportunities?stageId&limit&cursor` is a keyset page on opportunity id. `POST /bulk-stage-moves` requires `Idempotency-Key` and at least one filter field (`stageId`, `ownerId`, `status`, `valueMin`, `valueMax`, `createdAfter`, `createdBefore`) plus `targetStageId`. It returns 202 and the job id immediately. `GET /bulk-stage-moves/:id` returns status, health, heartbeat, and counts. Skip counts are split into conflict, filter, and already-there.
+- **Decision**: Every route requires `X-Workspace-Id`. Unknown workspace is 404. No stage API and no workspace API; stages are seeded rows. `POST /opportunities` takes name, value in integer cents, status, `ownerId`, `stageId`, and returns the row including `version`. `POST /opportunities/:id/stage` takes `stageId` and `expectedVersion`; a stale version is 409 and writes nothing. `GET /opportunities?stageId&limit&cursor` is a keyset page on opportunity id. `POST /bulk-stage-moves` requires `Idempotency-Key` and at least one filter field (`stageId`, `ownerId`, `status`, `valueMin`, `valueMax`, `createdAfter`, `createdBefore`) plus `targetStageId`. It returns 202 and the job id immediately. A ninth open job in that workspace is 429. `GET /bulk-stage-moves/:id` returns status, health, heartbeat, and counts. Skip counts are split into conflict, filter, and already-there.
 - **Consequences**: Part 1 stays thin. An empty filter is rejected. Resolve examines at most 2,000 index entries per chunk.

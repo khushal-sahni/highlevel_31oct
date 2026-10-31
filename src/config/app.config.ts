@@ -8,7 +8,9 @@ const DEFAULT_APPLY_CHUNK = 200;
 const DEFAULT_PAUSE_MS = 50;
 const DEFAULT_STALE_MS = 30_000;
 const DEFAULT_FATAL = 5;
-const ADVISORY_LOCK_KEY = 742_891;
+const DEFAULT_IN_FLIGHT = 4;
+const DEFAULT_OPEN_JOBS = 8;
+const PERMIT_BASE = 742_900;
 
 interface IJobInts {
   readonly port: number;
@@ -28,7 +30,7 @@ export class AppConfig {
   readonly chunkPauseMs: number;
   readonly heartbeatStaleMs: number;
   readonly fatalErrorLimit: number;
-  readonly advisoryLockKey: number;
+  readonly permitBase: number;
 
   constructor() {
     const ints = AppConfig.readInts();
@@ -39,7 +41,7 @@ export class AppConfig {
     this.chunkPauseMs = ints.chunkPauseMs;
     this.heartbeatStaleMs = ints.heartbeatStaleMs;
     this.fatalErrorLimit = ints.fatalErrorLimit;
-    this.advisoryLockKey = ADVISORY_LOCK_KEY;
+    this.permitBase = PERMIT_BASE;
   }
 
   get maxBulkMoveSize(): number {
@@ -48,6 +50,14 @@ export class AppConfig {
 
   get applyChunkSize(): number {
     return AppConfig.readInt('APPLY_CHUNK_SIZE', DEFAULT_APPLY_CHUNK, 1);
+  }
+
+  get maxInFlightChunks(): number {
+    return AppConfig.readInt('MAX_IN_FLIGHT_CHUNKS', DEFAULT_IN_FLIGHT, 1);
+  }
+
+  get maxOpenJobsPerWorkspace(): number {
+    return AppConfig.readInt('MAX_OPEN_JOBS_PER_WORKSPACE', DEFAULT_OPEN_JOBS, 1);
   }
 
   private static readInts(): IJobInts {

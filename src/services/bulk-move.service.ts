@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
+import { AppConfig } from '../config/app.config';
 import { ICreateBulkMoveInput } from '../dtos/create-bulk-move.dto';
 import { IBulkItemCounts, IBulkJob } from '../entities/bulk-job';
-import { ConflictError, NotFoundError } from '../errors/app.error';
+import { ConflictError, NotFoundError, RateLimitError } from '../errors/app.error';
 import { BulkItemRepository } from '../repositories/bulk-item.repository';
 import { BulkJobRepository } from '../repositories/bulk-job.repository';
 import { StageRepository } from '../repositories/stage.repository';
@@ -19,6 +20,7 @@ export class BulkMoveService {
     private readonly jobs: BulkJobRepository,
     private readonly items: BulkItemRepository,
     private readonly stages: StageRepository,
+    private readonly config: AppConfig,
   ) {}
 
   async enqueue(
@@ -32,6 +34,7 @@ export class BulkMoveService {
     if (existing !== null) {
       return this.rejectOrReturn(existing, bodyHash);
     }
+    await this.rejectIfBusy(workspaceId);
     return this.insertJob({
       workspaceId,
       idempotencyKey,
@@ -65,6 +68,13 @@ export class BulkMoveService {
     const stage = await this.stages.findInWorkspace(workspaceId, stageId);
     if (stage === null) {
       throw new NotFoundError('Stage');
+    }
+  }
+
+  private async rejectIfBusy(workspaceId: string): Promise<void> {
+    const open = await this.jobs.countOpen(workspaceId);
+    if (open >= this.config.maxOpenJobsPerWorkspace) {
+      throw new RateLimitError('Too many open jobs for this workspace');
     }
   }
 

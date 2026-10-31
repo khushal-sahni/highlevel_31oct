@@ -29,6 +29,28 @@
 
 ## Sessions
 
+## Session #8 — 2026-10-31
+> Fair multi-worker chunks.
+
+### Built
+- Permit ceiling (`MAX_IN_FLIGHT_CHUNKS`, default 4)
+- `SKIP LOCKED` job claim and fair promote
+- 429 when a workspace already has 8 open jobs
+- Forked two-process fairness test
+
+### Changed
+- One process does one chunk. Compose scales workers to 4.
+- DESIGN and DECISIONS supersede the global lane.
+
+### Fixed
+- A small tenant's job no longer waits behind another workspace's 50k move.
+
+### Deferred
+- Re-bench at N=4
+
+### New Tech Debt
+- Published numbers are still the one-worker run
+
 ## Session #7 — 2026-10-31
 > Type the JSON boundary. No new product behavior.
 

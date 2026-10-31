@@ -18,15 +18,15 @@ Tenant header is `X-Workspace-Id`.
 
 Out of scope from the brief: any UI, real authentication, a board or pipeline summary, per-stage counts or value rollups, filtering beyond the bulk filter, downstream automation events, deployment / CI / Kubernetes, custom fields / contacts / notes / tasks, and a perfect error taxonomy.
 
-Also not in this submission — they are the ranked extra week in DESIGN.md: partition `opportunities` by workspace, an adaptive pause, a read replica, per-workspace chunk fairness, and a short same-body dedupe window.
+Also not in this submission — they are the ranked extra week in DESIGN.md: partition `opportunities` by workspace, an adaptive pause, a read replica, and a short same-body dedupe window.
 
 ## Run
 
 ```bash
-docker compose up --build
+docker compose up --build --scale worker=4
 ```
 
-API on port 3000, worker in a second container, Postgres on 5432. API boot applies migrations and the **small** seed only.
+API on port 3000, four worker containers, Postgres on 5432. API boot applies migrations and the **small** seed only. Each worker has one database connection. At most four chunks run at once.
 
 Dev workspace: `11111111-1111-4111-8111-111111111111`
 
@@ -46,7 +46,7 @@ That migrates, runs the small seed, then Jest.
 
 ```bash
 DATABASE_URL=postgres://app:app@localhost:5432/opportunities npm run seed:large
-docker compose up --build -d postgres worker
+docker compose up --build -d --scale worker=1 postgres worker
 DATABASE_URL=postgres://app:app@localhost:5432/opportunities npm run start:dev
 DATABASE_URL=postgres://app:app@localhost:5432/opportunities npm run bench
 ```

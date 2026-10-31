@@ -16,11 +16,11 @@ export class BulkMoveEngine {
     private readonly opportunities: OpportunityRepository,
   ) {}
 
-  async findActive(client: IQueryClient): Promise<IBulkJob | null> {
-    return this.jobs.findActiveForWork(client);
-  }
-
-  async promoteNext(client: IQueryClient): Promise<boolean> {
+  async claimOrPromote(client: IQueryClient): Promise<IBulkJob | null> {
+    const claimed = await this.jobs.claimActiveForWork(client);
+    if (claimed !== null) {
+      return claimed;
+    }
     return this.jobs.promoteNext(client);
   }
 
@@ -39,32 +39,25 @@ export class BulkMoveEngine {
     client: IQueryClient,
     job: IBulkJob,
     config: AppConfig,
-  ): Promise<boolean> {
+  ): Promise<void> {
     if (job.status === JobStatus.RESOLVING) {
-      return this.resolvePage(client, job, config);
+      await this.resolvePage(client, job, config);
+      return;
     }
-    return this.applyChunk(client, job, config);
+    await this.applyChunk(client, job, config);
   }
 
   private async resolvePage(
     client: IQueryClient,
     job: IBulkJob,
     config: AppConfig,
-  ): Promise<boolean> {
-    await client.query('BEGIN');
-    try {
-      const page = await this.items.resolvePage(
-        client,
-        job,
-        config.resolvePageSize,
-      );
-      await this.finishResolve(client, job, page, config);
-      await client.query('COMMIT');
-      return true;
-    } catch (error: unknown) {
-      await client.query('ROLLBACK');
-      throw error;
-    }
+  ): Promise<void> {
+    const page = await this.items.resolvePage(
+      client,
+      job,
+      config.resolvePageSize,
+    );
+    await this.finishResolve(client, job, page, config);
   }
 
   private async finishResolve(
@@ -94,22 +87,14 @@ export class BulkMoveEngine {
     client: IQueryClient,
     job: IBulkJob,
     config: AppConfig,
-  ): Promise<boolean> {
-    await client.query('BEGIN');
-    try {
-      await client.query("SET LOCAL lock_timeout = '250ms'");
-      const claimed = await this.items.claimPending(
-        client,
-        job.id,
-        config.applyChunkSize,
-      );
-      await this.finishApply(client, job, claimed);
-      await client.query('COMMIT');
-      return true;
-    } catch (error: unknown) {
-      await client.query('ROLLBACK');
-      throw error;
-    }
+  ): Promise<void> {
+    await client.query("SET LOCAL lock_timeout = '250ms'");
+    const claimed = await this.items.claimPending(
+      client,
+      job.id,
+      config.applyChunkSize,
+    );
+    await this.finishApply(client, job, claimed);
   }
 
   private async finishApply(

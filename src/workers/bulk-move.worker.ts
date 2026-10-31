@@ -55,28 +55,42 @@ export class BulkMoveWorker {
   }
 
   async step(): Promise<boolean> {
+    return this.stepHeld(async () => undefined);
+  }
+
+  async stepHeld(wait: () => Promise<void>): Promise<boolean> {
     return this.db.withClient(async (client) => {
-      const locked = await this.tryLock(client);
-      if (!locked) {
+      const permit = await this.takePermit(client);
+      if (permit === null) {
         return false;
       }
       try {
-        return await this.work(client);
+        return await this.work(client, wait);
       } finally {
-        await this.unlock(client);
+        await this.releasePermit(client, permit);
       }
     });
   }
 
-  private async work(client: PoolClient): Promise<boolean> {
-    const active = await this.engine.findActive(client);
+  private async work(
+    client: PoolClient,
+    wait: () => Promise<void>,
+  ): Promise<boolean> {
+    await client.query('BEGIN');
+    let job: IBulkJob | null = null;
     try {
-      if (active === null) {
-        return this.engine.promoteNext(client);
+      job = await this.engine.claimOrPromote(client);
+      await wait();
+      if (job === null) {
+        await client.query('COMMIT');
+        return false;
       }
-      return await this.engine.advance(client, active, this.config);
+      await this.engine.advance(client, job, this.config);
+      await client.query('COMMIT');
+      return true;
     } catch (error: unknown) {
-      return this.handleWorkError(client, active, error);
+      await client.query('ROLLBACK');
+      return this.handleWorkError(client, job, error);
     }
   }
 
@@ -94,17 +108,26 @@ export class BulkMoveWorker {
     throw error;
   }
 
-  private async tryLock(client: PoolClient): Promise<boolean> {
+  private async takePermit(client: PoolClient): Promise<number | null> {
+    const max = this.config.maxInFlightChunks;
+    for (let i = 1; i <= max; i += 1) {
+      const key = this.config.permitBase + i;
+      if (await this.tryLock(client, key)) {
+        return key;
+      }
+    }
+    return null;
+  }
+
+  private async tryLock(client: PoolClient, key: number): Promise<boolean> {
     const result = await client.query<{ locked: boolean }>(
       'SELECT pg_try_advisory_lock($1) AS locked',
-      [this.config.advisoryLockKey],
+      [key],
     );
     return requireRow(result.rows[0], 'advisory lock').locked;
   }
 
-  private async unlock(client: PoolClient): Promise<void> {
-    await client.query('SELECT pg_advisory_unlock($1)', [
-      this.config.advisoryLockKey,
-    ]);
+  private async releasePermit(client: PoolClient, key: number): Promise<void> {
+    await client.query('SELECT pg_advisory_unlock($1)', [key]);
   }
 }

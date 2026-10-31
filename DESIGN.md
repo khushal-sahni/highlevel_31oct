@@ -2,7 +2,7 @@
 
 The product is one job: accept a filter, return a handle, move up to 50,000 matching opportunities to another stage in the background. This note is how that job is chunked, how it stays correct, and where it is still weak.
 
-Stack: NestJS, TypeScript, `pg` (node-postgres). Two processes, API and worker, one codebase. PostgreSQL is the primary store and the queue. No Redis, no Kafka, no ORM owning the chunk SQL. Every request carries `X-Workspace-Id`. Stages are seeded rows; there is no stage API and no workspace API.
+Stack: NestJS, TypeScript, `pg` (node-postgres). One API process and one or more worker processes, one codebase. PostgreSQL is the primary store and the queue. No Redis, no Kafka, no ORM owning the chunk SQL. Every request carries `X-Workspace-Id`. Stages are seeded rows; there is no stage API and no workspace API.
 
 Working notes for each choice live in [docs/DECISIONS.md](docs/DECISIONS.md).
 
@@ -10,7 +10,7 @@ Working notes for each choice live in [docs/DECISIONS.md](docs/DECISIONS.md).
 flowchart LR
   client[Client]
   api[API process]
-  worker[Worker process]
+  workers[Worker processes]
   pg[(PostgreSQL)]
 
   client -->|"POST /bulk-stage-moves 202"| api
@@ -18,10 +18,10 @@ flowchart LR
   client -->|"POST /opportunities/:id/stage"| api
   client -->|"GET /opportunities"| api
   api --> pg
-  worker -->|"resolve and apply"| pg
+  workers -->|"resolve and apply"| pg
 ```
 
-The API accepts the job and serves the poll, the single move, and list-by-stage. The worker is the only process that copies the snapshot or changes stages. Postgres holds `bulk_jobs`, `bulk_move_items`, `opportunities`, and `transitions`.
+The API accepts the job and serves the poll, the single move, and list-by-stage. Worker processes copy the snapshot and change stages. Postgres holds `bulk_jobs`, `bulk_move_items`, `opportunities`, and `transitions`. A ninth open job in the same workspace is 429.
 
 ---
 
@@ -45,7 +45,7 @@ The index that makes **apply** cheap is `bulk_move_items (job_id, state, opportu
 
 The index that makes **resolve** and list-by-stage cheap is `opportunities (workspace_id, stage_id, id)`. A filter with no stage walks `(workspace_id, id)`. There is no extra index per owner, status, or value; those predicates are applied on the walk. That is a deliberate write-cost choice on a 500,000-row seed, and it is the scan that fails first at 10× (below).
 
-One global Postgres advisory lock is held only for the duration of a chunk. `lock_timeout` is 250ms. A timeout is a yield: the worker retries later. It is not one of the five fatal chunk errors.
+A process holds one of `MAX_IN_FLIGHT_CHUNKS` permits (`pg_try_advisory_lock` on keys `742901` through `742900 + N`) only for the duration of a chunk. `lock_timeout` is 250ms. A timeout is a yield: the worker retries later. It is not one of the five fatal chunk errors.
 
 ```mermaid
 stateDiagram-v2
@@ -64,34 +64,34 @@ stateDiagram-v2
 
 ```mermaid
 flowchart TD
-  step[Worker step]
-  lock{"pg_try_advisory_lock"}
+  step[One worker process]
+  permit{"free permit 1 to N"}
   yieldLock[Yield then sleep 50ms]
-  active{resolving or running job?}
-  promote[Promote next queued job in a workspace with no active job]
+  claim{"claim other tenants job SKIP LOCKED"}
+  promote[Promote oldest queued job in a quiet workspace]
   phase{status}
   resolvePage[Resolve page of 2000]
-  applyChunk["BEGIN lock_timeout 250ms claim about 200 FOR UPDATE SKIP LOCKED"]
+  applyChunk["lock_timeout 250ms claim about 200 FOR UPDATE SKIP LOCKED"]
   timeout{"lock_timeout?"}
   yieldTimeout[Yield not a fatal error]
   commit[COMMIT heartbeat]
   crash[Process dies]
   rollback[ROLLBACK items stay pending]
   sleep[Sleep 50ms outside the transaction]
-  unlock[Release advisory lock]
+  unlock[Release permit]
 
-  step --> lock
-  lock -->|miss| yieldLock
-  lock -->|held| active
-  active -->|no| promote
-  active -->|yes| phase
+  step --> permit
+  permit -->|no| yieldLock
+  permit -->|yes| claim
+  claim -->|no| promote
+  claim -->|yes| phase
+  promote --> phase
   phase -->|resolving| resolvePage
   phase -->|running| applyChunk
   applyChunk --> timeout
   timeout -->|yes| yieldTimeout
   timeout -->|no| commit
   resolvePage --> commit
-  promote --> sleep
   commit --> sleep
   yieldLock --> sleep
   yieldTimeout --> sleep
@@ -237,15 +237,19 @@ flowchart LR
 
 Mechanism, not a claim:
 
-- The worker is a separate process with one database connection. Killing it leaves the API up.
-- One chunk in flight in the whole system (advisory lock, held only for that chunk).
-- One `resolving` or `running` job per workspace. A second job stays `queued`. Queued is not stalled.
+- Each worker is a separate OS process with one database connection. Killing one leaves the API and the other workers up.
+- At most `MAX_IN_FLIGHT_CHUNKS` chunks in the whole system (default 4). Each process holds one permit only for that chunk.
+- A process claims a `resolving` or `running` job with `FOR UPDATE SKIP LOCKED`, oldest `heartbeat_at` first. Two processes take two workspaces.
+- One `resolving` or `running` job per workspace. A second job in that workspace stays `queued`. Queued is not stalled.
+- A workspace may have 8 jobs that are not `completed` or `failed`. The next `POST` is 429.
 - 50ms sleep after every committed resolve or apply chunk, outside the transaction.
 - Every statement is scoped by `workspace_id`.
 
+If only one workspace has work, free processes keep serving it, still one chunk at a time for that tenant. Extra permits sit idle.
+
 The hole: it is still one Postgres. WAL and cache traffic from the large workspace can nudge latency in another workspace. We do not pretend a `WHERE workspace_id = $1` gives cache isolation. A read replica and partitioning are how we would close that hole; they are not in this submission.
 
-A small workspace’s bulk job also waits behind a 50,000-row job. That is the fairness trade we took for a single in-flight chunk.
+[BENCHMARKS.md](BENCHMARKS.md) is a one-worker run. That number is still the N=1 floor. This change was not re-measured at N=4.
 
 ---
 
@@ -295,7 +299,7 @@ Every route requires `X-Workspace-Id`. Unknown workspace is 404.
 | POST | `/opportunities` | name, value in integer cents, status, `ownerId`, `stageId`; returns `version` |
 | POST | `/opportunities/:id/stage` | `stageId`, `expectedVersion`; stale version is 409 |
 | GET | `/opportunities` | `stageId`, `limit`, `cursor` — keyset on opportunity id |
-| POST | `/bulk-stage-moves` | `Idempotency-Key`; at least one filter field; `targetStageId`; 202 + job id |
+| POST | `/bulk-stage-moves` | `Idempotency-Key`; at least one filter field; `targetStageId`; 202 + job id; 429 if that workspace already has 8 open jobs |
 | GET | `/bulk-stage-moves/:id` | status, health, heartbeat, counts |
 
 Filter fields: `stageId`, `ownerId`, `status`, `valueMin`, `valueMax`, `createdAfter`, `createdBefore`. An empty filter is rejected.
@@ -319,7 +323,8 @@ Already in this submission: the 50,000 cap, and a 2,000-entry bound on every res
 1. **Partition `opportunities` by `workspace_id`.** Vacuum and index bloat stay with the heavy tenant. WAL is still shared; this is the first real isolation step.
 2. **Adaptive pause.** Tighten or loosen the 50ms sleep once benchmarks show interactive latency climbing. Guessing the constant is worse than measuring it.
 3. **Read replica for list-by-stage**, only if those numbers show the cache hole. Progress reads stay on the primary so a poll cannot lie.
-4. **One in-flight chunk per workspace**, under a global ceiling, so a small tenant’s bulk job is not stuck behind a 50,000-row job.
-5. **A short same-body dedupe window** for clients that retry with a new `Idempotency-Key`. An intentional rerun later in the day still starts a new job.
+4. **A short same-body dedupe window** for clients that retry with a new `Idempotency-Key`. An intentional rerun later in the day still starts a new job.
+
+One in-flight chunk per workspace under a global ceiling is in this submission.
 
 Redis, Kafka, UI, auth, and more CRM endpoints stay off this list. Skip reasons are in this submission; they are not the extra week.

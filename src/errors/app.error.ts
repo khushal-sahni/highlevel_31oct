@@ -26,3 +26,9 @@ export class ValidationError extends AppError {
     super(message, 400, 'VALIDATION');
   }
 }
+
+export class RateLimitError extends AppError {
+  constructor(message: string) {
+    super(message, 429, 'TOO_MANY_JOBS');
+  }
+}

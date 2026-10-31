@@ -30,6 +30,9 @@ services:
     environment:
       DATABASE_URL: postgres://app:app@postgres:5432/opportunities
       DATABASE_POOL_MAX: "1"
+      MAX_IN_FLIGHT_CHUNKS: "4"
+    deploy:
+      replicas: 4
     depends_on:
       postgres:
         condition: service_healthy
