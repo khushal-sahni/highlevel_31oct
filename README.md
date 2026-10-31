@@ -6,13 +6,13 @@ HighLevel SDE-3 take-home. One hard operation: move up to 50,000 filtered opport
 
 **Design:** [DESIGN.md](DESIGN.md)
 
+**Numbers:** [BENCHMARKS.md](BENCHMARKS.md)
+
 ## What works
 
-Part 1: create an opportunity, move one opportunity with a version check and a transition, list a stage with a keyset cursor.
-
-Part 2: `POST /bulk-stage-moves` (requires `Idempotency-Key`) returns 202. A worker resolves a snapshot and applies chunks. `GET /bulk-stage-moves/:id` reports committed counts and health.
-
-Not implemented: 500k seed, benchmarks.
+- Part 1: create, versioned single move + transition, keyset list-by-stage
+- Part 2: `POST /bulk-stage-moves` (requires `Idempotency-Key`) returns 202; a worker resolves a snapshot and applies chunks; `GET /bulk-stage-moves/:id` reports committed counts and health
+- Large seed and measured 50k run (see BENCHMARKS.md)
 
 Tenant header is `X-Workspace-Id`.
 
@@ -22,7 +22,7 @@ Tenant header is `X-Workspace-Id`.
 docker compose up --build
 ```
 
-API on port 3000, worker in a second container, Postgres on 5432. Migrations and a tiny seed run on API boot.
+API on port 3000, worker in a second container, Postgres on 5432. API boot applies migrations and the **small** seed only.
 
 Dev workspace: `11111111-1111-4111-8111-111111111111`
 
@@ -30,10 +30,23 @@ New Lead: `22222222-2222-4222-8222-000000000001`
 
 ## Test
 
-Postgres must be up.
+One command on a clean machine (starts Postgres, does not start the worker):
 
 ```bash
-DATABASE_URL=postgres://app:app@localhost:5432/opportunities npm test
+docker compose run --rm --build api npm test
 ```
+
+That migrates, runs the small seed, then Jest.
+
+## Large seed and bench
+
+```bash
+DATABASE_URL=postgres://app:app@localhost:5432/opportunities npm run seed:large
+docker compose up --build -d postgres worker
+DATABASE_URL=postgres://app:app@localhost:5432/opportunities npm run start:dev
+DATABASE_URL=postgres://app:app@localhost:5432/opportunities npm run bench
+```
+
+`seed:large` writes `db/benchmark-target.json` (a 50,000-row filter). If the API is not on port 3000, set `BENCH_API_URL`.
 
 Working notes: [docs/STATUS.md](docs/STATUS.md), [docs/ROADMAP.md](docs/ROADMAP.md), [docs/DECISIONS.md](docs/DECISIONS.md), [AGENTS.md](AGENTS.md).

@@ -49,15 +49,15 @@ Done enough means Part 1 works, Part 2 holds all five properties, seed and bench
 - [x] Isolation mechanism implemented (same workspace interactive, other workspaces untouched)
 - [x] Tests that fail if those safeties are removed
 
-### M4 — Seed and measure `[ ]`
+### M4 — Seed and measure `[x]`
 > They will try to reproduce these numbers.
 
-- [ ] Seed script: 1 large workspace (500,000 opportunities, 12 uneven stages, ~18 months) and 5 small workspaces
-- [ ] Small seed used by the one-command test run
-- [ ] Bulk 50k: wall-clock and sustained throughput
-- [ ] Interactive p95 / p99 in the same workspace and in another, during the bulk run
-- [ ] Kill and resume: time to completion and proof of correctness
-- [ ] Hardware and method written in `BENCHMARKS.md`
+- [x] Seed script: 1 large workspace (500,000 opportunities, 12 uneven stages, ~18 months) and 5 small workspaces
+- [x] Small seed used by the one-command test run
+- [x] Bulk 50k: wall-clock and sustained throughput
+- [x] Interactive p95 / p99 in the same workspace and in another, during the bulk run
+- [x] Kill and resume: time to completion and proof of correctness
+- [x] Hardware and method written in `BENCHMARKS.md`
 
 ### M5 — Submission polish `[ ]`
 > Real history, runnable, honest about gaps.

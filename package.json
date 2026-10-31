@@ -9,7 +9,10 @@
     "start:worker": "ts-node src/worker.ts",
     "migrate": "ts-node src/db/migrate.ts",
     "seed": "ts-node src/db/seed.ts",
-    "test": "jest --runInBand"
+    "seed:large": "ts-node src/db/seed-large.ts",
+    "bench": "ts-node src/db/bench.ts",
+    "test": "ts-node src/db/migrate.ts && ts-node src/db/seed.ts && jest --runInBand",
+    "test:docker": "docker compose run --rm --build api npm test"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.6",

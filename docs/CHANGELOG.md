@@ -29,6 +29,28 @@
 
 ## Sessions
 
+## Session #5 — 2026-10-31
+> Seed and measure.
+
+### Built
+- `npm run seed:large` — 500k opportunities, 12 uneven stages, 5 small workspaces, `db/benchmark-target.json`
+- `npm run bench` — 50k wall-clock, interactive p95/p99, kill-and-resume with SQL proof
+- [BENCHMARKS.md](../BENCHMARKS.md) from a real run on Apple M4
+
+### Changed
+- `npm test` now migrates, small-seeds, then Jest
+- `docker compose run --rm --build api npm test` is the one-command test path
+- Dockerfile copies `jest.config.js`
+
+### Fixed
+- Docker Jest failed without `jest.config.js`
+
+### Deferred
+- Submission polish (M5): commit history, DESIGN vs code pass
+
+### New Tech Debt
+- None
+
 ## Session #4 — 2026-10-31
 > Bulk job. No 500k seed.
 
