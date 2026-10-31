@@ -6,6 +6,23 @@ Stack: NestJS, TypeScript, `pg` (node-postgres). Two processes, API and worker, 
 
 Working notes for each choice live in [docs/DECISIONS.md](docs/DECISIONS.md).
 
+```mermaid
+flowchart LR
+  client[Client]
+  api[API process]
+  worker[Worker process]
+  pg[(PostgreSQL)]
+
+  client -->|"POST /bulk-stage-moves 202"| api
+  client -->|"GET /bulk-stage-moves/:id"| api
+  client -->|"POST /opportunities/:id/stage"| api
+  client -->|"GET /opportunities"| api
+  api --> pg
+  worker -->|"resolve and apply"| pg
+```
+
+The API accepts the job and serves the poll, the single move, and list-by-stage. The worker is the only process that copies the snapshot or changes stages. Postgres holds `bulk_jobs`, `bulk_move_items`, `opportunities`, and `transitions`.
+
 ---
 
 ## How the job is chunked, and how the cursor survives a restart
@@ -30,6 +47,60 @@ The index that makes **resolve** and list-by-stage cheap is `opportunities (work
 
 One global Postgres advisory lock is held only for the duration of a chunk. `lock_timeout` is 250ms. A timeout is a yield: the worker retries later. It is not one of the five fatal chunk errors.
 
+```mermaid
+stateDiagram-v2
+  [*] --> queued: POST inserts job
+  queued --> resolving: workspace has no resolving or running job
+  resolving --> resolving: resolve page of 2000 still more
+  resolving --> running: last resolve page copied
+  resolving --> failed: snapshot over 50000
+  running --> running: apply about 200 pending items
+  running --> completed: claim finds no pending
+  resolving --> failed: 5 consecutive real chunk errors
+  running --> failed: 5 consecutive real chunk errors
+```
+
+`failed` from the 50,000 cap happens before any stage change. `failed` from five chunk errors leaves already-committed moves in place.
+
+```mermaid
+flowchart TD
+  step[Worker step]
+  lock{"pg_try_advisory_lock"}
+  yieldLock[Yield then sleep 50ms]
+  active{resolving or running job?}
+  promote[Promote next queued job in a workspace with no active job]
+  phase{status}
+  resolvePage[Resolve page of 2000]
+  applyChunk["BEGIN lock_timeout 250ms claim about 200 FOR UPDATE SKIP LOCKED"]
+  timeout{"lock_timeout?"}
+  yieldTimeout[Yield not a fatal error]
+  commit[COMMIT heartbeat]
+  crash[Process dies]
+  rollback[ROLLBACK items stay pending]
+  sleep[Sleep 50ms outside the transaction]
+  unlock[Release advisory lock]
+
+  step --> lock
+  lock -->|miss| yieldLock
+  lock -->|held| active
+  active -->|no| promote
+  active -->|yes| phase
+  phase -->|resolving| resolvePage
+  phase -->|running| applyChunk
+  applyChunk --> timeout
+  timeout -->|yes| yieldTimeout
+  timeout -->|no| commit
+  resolvePage --> commit
+  promote --> sleep
+  commit --> sleep
+  yieldLock --> sleep
+  yieldTimeout --> sleep
+  applyChunk -.-> crash
+  resolvePage -.-> crash
+  crash --> rollback
+  sleep --> unlock
+```
+
 ---
 
 ## Idempotency
@@ -45,6 +116,24 @@ What it protects: creating a second job for a retried POST. It does not, by itse
 Where a retry can still slip through: a client that retries with a **new** key. That inserts a second job. The version check still stops a row from moving twice (the second job sees a new `version` or a later `stage_changed_at` and skips). The two jobs split the set and the progress. A short same-body window is on the extra-week list; it is not in this submission.
 
 Worker replay of a committed chunk does not double-apply. The item is no longer `pending`, and a transition is unique on `(job_id, opportunity_id)`.
+
+```mermaid
+flowchart TD
+  post["POST /bulk-stage-moves"]
+  known{"Idempotency-Key exists for this workspace?"}
+  hashMatch{"body hash matches?"}
+  same[Return the original job]
+  conflict[409 different body]
+  insert[Insert queued job return 202]
+
+  post --> known
+  known -->|no new key| insert
+  known -->|yes| hashMatch
+  hashMatch -->|yes same body| same
+  hashMatch -->|no| conflict
+```
+
+A second job created with a new key still cannot move a deal the first job already moved: apply sees a new `version` or a later `stage_changed_at` and skips.
 
 ---
 
@@ -68,6 +157,49 @@ Skip reasons on the item:
 
 A person moving a deal by hand sends `expectedVersion` and uses the same compare-and-swap. A stale client gets 409 and writes nothing. The job does not overwrite that person; the person does not overwrite a job apply that already committed.
 
+```mermaid
+flowchart TD
+  claimed[Claimed pending item]
+  eligible{"version = seen_version and stage_changed_at <= job.created_at and sent filter fields still match?"}
+  moved["Mark moved write one transition"]
+  gone{Opportunity still exists?}
+  already{"stage_id = targetStageId?"}
+  collision{"version changed or stage_changed_at after job.created_at?"}
+  skipAlready[skipped already_there]
+  skipConflict[skipped conflict]
+  skipFilter[skipped filter]
+  noWrite[No stage change no transition]
+
+  claimed --> eligible
+  eligible -->|yes| moved
+  eligible -->|no| gone
+  gone -->|no| skipFilter
+  gone -->|yes| already
+  already -->|yes| skipAlready
+  already -->|no| collision
+  collision -->|yes| skipConflict
+  collision -->|no| skipFilter
+  skipAlready --> noWrite
+  skipConflict --> noWrite
+  skipFilter --> noWrite
+```
+
+```mermaid
+sequenceDiagram
+  participant Person
+  participant API
+  participant Worker
+  participant Row as opportunities
+
+  Person->>API: POST /opportunities/:id/stage with expectedVersion
+  Worker->>Row: UPDATE when version equals seen_version
+  API->>Row: UPDATE when version equals expectedVersion
+  Note over Row: First commit wins
+  Note over Row: Loser writes nothing
+  Note over API: Person gets 409
+  Note over Worker: Item is skipped conflict
+```
+
 ---
 
 ## Snapshot vs live, and the consequence
@@ -85,6 +217,19 @@ A half-applied job looks like this to the user:
 - progress numbers that match those rows
 
 “Finish correctly” after a kill at 30,000 of 50,000 means: the 30,000 committed moves stay, the uncommitted chunk is `pending` again, the remaining pending items are claimed, and no extra transition is written for a deal already moved by this job.
+
+```mermaid
+flowchart LR
+  subgraph inJob [In the snapshot]
+    moved["items moved one transition each"]
+    pending["items pending untouched"]
+    skipped["items skipped with a reason"]
+  end
+  subgraph notIn [Never an item]
+    late["Deal created after the job row"]
+    passed["Deal that started matching after the keyset passed it"]
+  end
+```
 
 ---
 
@@ -115,6 +260,29 @@ A small workspace’s bulk job also waits behind a 50,000-row job. That is the f
 `heartbeat_at` is written by the database clock on the chunk commit. Health age is `Date.now()` minus that timestamp when the poll is served.
 
 A queued job has no stall clock. A live worker claiming pending items is what clears a stall.
+
+```mermaid
+flowchart TD
+  poll["GET /bulk-stage-moves/:id"]
+  status{status}
+  noClock["health is null queued completed failed"]
+  age["age is Date.now minus heartbeat_at"]
+  thresh{age under 30s?}
+  active[health active]
+  stalled[health stalled]
+  recover[Live worker claims pending items]
+
+  poll --> status
+  status -->|queued or completed or failed| noClock
+  status -->|resolving or running| age
+  age --> thresh
+  thresh -->|yes| active
+  thresh -->|no| stalled
+  stalled --> recover
+  recover --> active
+```
+
+Health is not a status. Status stays `resolving` or `running` while stalled.
 
 ---
 

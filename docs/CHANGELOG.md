@@ -40,6 +40,7 @@
 - DESIGN.md states how health age is computed
 - Worker process defaults `DATABASE_POOL_MAX` to 1
 - ROADMAP M5 complete
+- DESIGN.md carries Mermaid diagrams for processes, job states, worker step, idempotency, collisions, the snapshot, and health
 
 ### Fixed
 - `npm run start:worker` now matches the one-connection write-up

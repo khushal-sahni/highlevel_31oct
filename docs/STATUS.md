@@ -8,7 +8,7 @@
 
 - Part 1, bulk job, large seed, and measured 50k run.
 - README lists how to run, seed, test, and what is not implemented.
-- DESIGN.md matches the code, including health age and the worker's single connection.
+- DESIGN.md matches the code, including health age and the worker's single connection. Mermaid diagrams in DESIGN.md show the two processes, job states, worker step, idempotency, collisions, the snapshot, and health.
 
 ---
 
@@ -26,7 +26,7 @@
 
 ## Where We Left Off
 
-Session #6 finished M5 polish. History is five commits. Do not squash. Do not push unless asked.
+Session #6 finished M5 polish, then added diagrams to DESIGN.md. History is five commits plus this uncommitted write-up. Do not squash. Do not push unless asked.
 
 ---
 
