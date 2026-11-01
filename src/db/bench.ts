@@ -179,7 +179,7 @@ class BenchProcess {
     const pool = new DatabasePool(config);
     const logger = new LoggerService();
     const api = new BenchApi(
-      process.env['BENCH_API_URL'] ?? 'http://localhost:3000',
+      process.env['BENCH_API_URL'] ?? 'http://localhost:3110',
       target,
     );
     try {

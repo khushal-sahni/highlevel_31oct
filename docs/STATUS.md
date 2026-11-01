@@ -1,6 +1,6 @@
 # STATUS.md
 > Weekend dashboard. Read this first. Update this last.
-> Last updated: 2026-11-01 | Session: #9
+> Last updated: 2026-11-01 | Session: #10
 
 ---
 
@@ -22,13 +22,13 @@
 
 ## Known Broken / Blocked
 
-- Host port 3000 can be taken; this bench used `BENCH_API_URL=http://localhost:3110`.
+- Nothing.
 
 ---
 
 ## Where We Left Off
 
-Session #9 re-measured the three brief scenarios with four workers, wrote ENTITIES.md, and aligned DESIGN / README / notes. Do not squash. Do not push unless asked.
+Session #10 made 3110 the API port everywhere (compose, Docker, env, bench, docs). Session #9 re-measured the three brief scenarios with four workers. Do not squash. Do not push unless asked.
 
 ---
 
@@ -61,7 +61,6 @@ See [README.md](../README.md).
 
 ## Tech Debt
 
-- Host port 3000 can collide.
 - Accepted design holes: one shared Postgres, new-key idempotency slip-through.
 - Same-workspace interactive p99 was 31ms on the N=4 run (N=1 floor was 9ms).
 
@@ -77,7 +76,7 @@ None.
 
 | Metric | Value |
 |---|---|
-| Total sessions | 9 |
+| Total sessions | 10 |
 | Modules complete | Part 1 + bulk job + seed/measure + polish + fair chunks + N=4 bench |
 | Hard-property tests | 9 |
 | Last measured | 2026-11-01 (~5,600 rows/s on M4, N=4; N=1 floor 21.8s) |

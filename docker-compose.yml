@@ -16,10 +16,10 @@ services:
   api:
     build: .
     ports:
-      - "3000:3000"
+      - "3110:3110"
     environment:
       DATABASE_URL: postgres://app:app@postgres:5432/opportunities
-      PORT: 3000
+      PORT: 3110
     depends_on:
       postgres:
         condition: service_healthy

@@ -28,7 +28,7 @@ Also not in this submission — they are the ranked extra week in DESIGN.md: par
 docker compose up --build --scale worker=4
 ```
 
-API on port 3000, four worker containers, Postgres on 5432. API boot applies migrations and the **small** seed only. Each worker has one database connection. At most four chunks run at once.
+API on port 3110, four worker containers, Postgres on 5432. API boot applies migrations and the **small** seed only. Each worker has one database connection. At most four chunks run at once.
 
 Dev workspace: `11111111-1111-4111-8111-111111111111`
 
@@ -53,6 +53,6 @@ DATABASE_URL=postgres://app:app@localhost:5432/opportunities npm run start:dev
 DATABASE_URL=postgres://app:app@localhost:5432/opportunities npm run bench
 ```
 
-`seed:large` writes `db/benchmark-target.json` (a 50,000-row filter). If the API is not on port 3000, set `BENCH_API_URL`.
+`seed:large` writes `db/benchmark-target.json` (a 50,000-row filter). If the API is not on port 3110, set `BENCH_API_URL`.
 
 Working notes: [docs/STATUS.md](docs/STATUS.md), [docs/ROADMAP.md](docs/ROADMAP.md), [docs/DECISIONS.md](docs/DECISIONS.md), [AGENTS.md](AGENTS.md).

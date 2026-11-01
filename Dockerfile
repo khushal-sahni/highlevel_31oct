@@ -7,5 +7,5 @@ COPY src ./src
 COPY db ./db
 RUN npm run build
 ENV NODE_ENV=production
-EXPOSE 3000
+EXPOSE 3110
 CMD ["sh", "-c", "node dist/db/migrate.js && node dist/db/seed.js && node dist/main.js"]

@@ -92,4 +92,4 @@ DATABASE_URL=postgres://app:app@localhost:5432/opportunities npm run start:dev
 DATABASE_URL=postgres://app:app@localhost:5432/opportunities npm run bench
 ```
 
-If the API is not on port 3000, set `BENCH_API_URL`. This run used `BENCH_API_URL=http://localhost:3110`.
+If the API is not on port 3110, set `BENCH_API_URL`.

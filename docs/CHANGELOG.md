@@ -29,6 +29,25 @@
 
 ## Sessions
 
+## Session #10 — 2026-11-01
+> API port is 3110 everywhere.
+
+### Built
+- Nothing.
+
+### Changed
+- Default API port is 3110 in compose, Dockerfile, `.env.example`, bench fallback, README, and BENCHMARKS
+- Removed the leftover "host 3000 can collide" note from STATUS
+
+### Fixed
+- Nothing.
+
+### Deferred / Not Done
+- Nothing.
+
+### New Tech Debt
+- None.
+
 ## Session #9 — 2026-11-01
 > N=4 bench, entities, stale write-up.
 
