@@ -29,6 +29,28 @@
 
 ## Sessions
 
+## Session #9 — 2026-11-01
+> N=4 bench, entities, stale write-up.
+
+### Built
+- [ENTITIES.md](../ENTITIES.md) from `001_init.sql` and `002_bulk_move.sql`
+
+### Changed
+- Re-measured the three brief scenarios against four worker containers
+- [BENCHMARKS.md](../BENCHMARKS.md) is the N=4 run; 2026-10-31 21.8s / p95 4ms / 3ms is the N=1 floor
+- DESIGN isolation cites the new interactive p95/p99
+- README large-seed block and bench restart use `--scale worker=4`
+- DECISIONS, REVIEW-QA, STATUS aligned to the published N=4 numbers
+
+### Fixed
+- Resume in `bench.ts` now brings four workers back after `docker compose kill worker`
+
+### Deferred
+- Nothing from this plan
+
+### New Tech Debt
+- Same-workspace p99 climbed to 31ms at N=4; the hole is still one WAL
+
 ## Session #8 — 2026-10-31
 > Fair multi-worker chunks.
 

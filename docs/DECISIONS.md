@@ -68,7 +68,7 @@ Use this format for each decision:
 - **Status**: Accepted
 - **Context**: A single global lane serializes every tenant. The brief asked for a concurrency cap, not one worker for the whole database. Arrival rate is not the scarce resource; worker slots are.
 - **Decision**: Each worker process has one connection and takes one of `MAX_IN_FLIGHT_CHUNKS` permits (default 4) for a single chunk. It claims a `resolving` or `running` job with `FOR UPDATE SKIP LOCKED`, oldest `heartbeat_at` first, or promotes the oldest queued job in a workspace that has no active job. One active job per workspace. At most 8 jobs that are not `completed` or `failed`; the next POST is 429. Lock timeout 250ms is a yield. 50ms pause outside the transaction. No Redis or Kafka. No paid tiers; every workspace has the same weight.
-- **Consequences**: Two worker processes can move two tenants at once. A noisy tenant cannot occupy every slot. The hole: it is still one Postgres, so WAL and cache traffic can nudge another tenant. BENCHMARKS.md is still the N=1 run.
+- **Consequences**: Two worker processes can move two tenants at once. A noisy tenant cannot occupy every slot. The hole: it is still one Postgres, so WAL and cache traffic can nudge another tenant. BENCHMARKS.md is the N=4 run; the 2026-10-31 21.8s line is the N=1 floor.
 
 ### NestJS, TypeScript, node-postgres
 - **Date**: 2026-10-31

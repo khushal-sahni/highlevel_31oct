@@ -4,7 +4,7 @@ The product is one job: accept a filter, return a handle, move up to 50,000 matc
 
 Stack: NestJS, TypeScript, `pg` (node-postgres). One API process and one or more worker processes, one codebase. PostgreSQL is the primary store and the queue. No Redis, no Kafka, no ORM owning the chunk SQL. Every request carries `X-Workspace-Id`. Stages are seeded rows; there is no stage API and no workspace API.
 
-Working notes for each choice live in [docs/DECISIONS.md](docs/DECISIONS.md).
+Tables and indexes: [ENTITIES.md](ENTITIES.md). Working notes for each choice live in [docs/DECISIONS.md](docs/DECISIONS.md).
 
 ```mermaid
 flowchart LR
@@ -245,11 +245,11 @@ Mechanism, not a claim:
 - 50ms sleep after every committed resolve or apply chunk, outside the transaction.
 - Every statement is scoped by `workspace_id`.
 
-If only one workspace has work, free processes keep serving it, still one chunk at a time for that tenant. Extra permits sit idle.
+If only one workspace has work, free processes still take the next chunk after the previous commit. One tenant is still one apply transaction at a time. The 50ms pauses overlap, so the same 50k job finishes faster than the N=1 floor. Extra permits are not four parallel updates of one row set.
 
 The hole: it is still one Postgres. WAL and cache traffic from the large workspace can nudge latency in another workspace. We do not pretend a `WHERE workspace_id = $1` gives cache isolation. A read replica and partitioning are how we would close that hole; they are not in this submission.
 
-[BENCHMARKS.md](BENCHMARKS.md) is a one-worker run. That number is still the N=1 floor. This change was not re-measured at N=4.
+[BENCHMARKS.md](BENCHMARKS.md) is the four-worker run: other-workspace list p95 3ms / p99 6ms, same-workspace list-plus-move p95 5ms / p99 31ms. The 2026-10-31 one-worker line (21.8s, p95 4ms / 3ms) is the N=1 floor.
 
 ---
 

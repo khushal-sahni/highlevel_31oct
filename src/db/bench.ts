@@ -167,7 +167,7 @@ class BenchRunner {
   private restartWorker(): void {
     this.logger.info('Killing worker');
     execSync('docker compose kill worker', { stdio: 'inherit' });
-    execSync('docker compose up -d worker', { stdio: 'inherit' });
+    execSync('docker compose up -d --scale worker=4 worker', { stdio: 'inherit' });
     this.logger.info('Worker restarted');
   }
 }

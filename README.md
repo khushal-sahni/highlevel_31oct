@@ -4,6 +4,8 @@ HighLevel SDE-3 take-home. One hard operation: move up to 50,000 filtered opport
 
 **Design:** [DESIGN.md](DESIGN.md)
 
+**Schema:** [ENTITIES.md](ENTITIES.md)
+
 **Numbers:** [BENCHMARKS.md](BENCHMARKS.md)
 
 ## What works
@@ -46,7 +48,7 @@ That migrates, runs the small seed, then Jest.
 
 ```bash
 DATABASE_URL=postgres://app:app@localhost:5432/opportunities npm run seed:large
-docker compose up --build -d --scale worker=1 postgres worker
+docker compose up --build -d --scale worker=4 postgres worker
 DATABASE_URL=postgres://app:app@localhost:5432/opportunities npm run start:dev
 DATABASE_URL=postgres://app:app@localhost:5432/opportunities npm run bench
 ```
