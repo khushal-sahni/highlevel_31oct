@@ -27,6 +27,7 @@ export class BulkMoveWorker {
   async run(): Promise<void> {
     while (this.running) {
       await this.stepSafely();
+      // Pause outside the transaction so other traffic can run.
       await sleep(this.config.chunkPauseMs);
     }
   }
@@ -55,6 +56,7 @@ export class BulkMoveWorker {
   }
 
   async step(): Promise<boolean> {
+    // Production does not pause; the fairness test injects a wait after claim.
     return this.stepHeld(async () => undefined);
   }
 
@@ -80,6 +82,7 @@ export class BulkMoveWorker {
     let job: IBulkJob | null = null;
     try {
       job = await this.engine.claimOrPromote(client);
+      // Hook after the row is locked, before any stage change.
       await wait();
       if (job === null) {
         await client.query('COMMIT');
@@ -100,6 +103,7 @@ export class BulkMoveWorker {
     error: unknown,
   ): Promise<boolean> {
     if (isLockTimeout(error)) {
+      // Contention: yield this chunk; do not count it as a fatal error.
       return false;
     }
     if (active !== null) {
@@ -108,6 +112,7 @@ export class BulkMoveWorker {
     throw error;
   }
 
+  // Caps concurrent chunks across all worker processes, not just this one.
   private async takePermit(client: PoolClient): Promise<number | null> {
     const max = this.config.maxInFlightChunks;
     for (let i = 1; i <= max; i += 1) {

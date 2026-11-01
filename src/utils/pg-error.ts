@@ -16,5 +16,5 @@ export function isUniqueViolation(error: unknown): boolean {
 }
 
 export function isLockTimeout(error: unknown): boolean {
-  return isPgError(error) && error.code === '55P03';
+  return isPgError(error) && error.code === '55P03'; // Postgres lock_timeout.
 }

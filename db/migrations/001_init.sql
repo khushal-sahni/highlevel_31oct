@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
   applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- uuidv7 is time-ordered so keyset walks stay sequential.
 CREATE TABLE workspaces (
   id UUID PRIMARY KEY DEFAULT uuidv7()
 );
@@ -23,8 +24,8 @@ CREATE TABLE opportunities (
   value BIGINT NOT NULL CHECK (value >= 0),
   status TEXT NOT NULL CHECK (status IN ('open', 'won', 'lost', 'abandoned')),
   owner_id TEXT NOT NULL,
-  version INT NOT NULL DEFAULT 1,
-  stage_changed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  version INT NOT NULL DEFAULT 1, -- CAS for a single move and a bulk apply.
+  stage_changed_at TIMESTAMPTZ NOT NULL DEFAULT now(), -- Collision: human edit after enqueue.
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

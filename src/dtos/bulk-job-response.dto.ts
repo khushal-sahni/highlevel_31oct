@@ -45,6 +45,7 @@ export function toBulkJobResponse(
   };
 }
 
+// Derived from heartbeat age — not a stored column.
 function jobHealth(job: IBulkJob, staleMs: number): JobHealth | null {
   if (job.status !== JobStatus.RESOLVING && job.status !== JobStatus.RUNNING) {
     return null;

@@ -9,7 +9,7 @@ export interface IFilterSql {
 export function bulkFilterSql(
   filter: IBulkFilter,
   jobCreatedAt: Date,
-  startIndex: number,
+  startIndex: number, // Resolve and apply bind lists start at different $n.
   alias: string,
 ): IFilterSql {
   const owner = startIndex;
@@ -27,7 +27,7 @@ export function bulkFilterSql(
     `AND ($${valueMax}::bigint IS NULL OR ${col('value')} <= $${valueMax})`,
     `AND ($${createdAfter}::timestamptz IS NULL OR ${col('created_at')} >= $${createdAfter})`,
     `AND ($${createdBefore}::timestamptz IS NULL OR ${col('created_at')} <= $${createdBefore})`,
-    `AND ${col('created_at')} <= $${jobCreated}`,
+    `AND ${col('created_at')} <= $${jobCreated}`, // Snapshot: deals created after enqueue stay out.
   ].join('\n');
   return {
     clause,

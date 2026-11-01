@@ -7,6 +7,7 @@ export interface IHashableBulkBody {
 }
 
 export function hashBulkBody(input: IHashableBulkBody): string {
+  // Fixed key order so the same body always hashes the same.
   const payload = JSON.stringify({
     targetStageId: input.targetStageId,
     filter: {

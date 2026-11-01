@@ -53,6 +53,7 @@ export class TransitionRepository {
        SELECT * FROM UNNEST(
          $1::uuid[], $2::uuid[], $3::uuid[], $4::uuid[], $5::uuid[]
        )
+       -- Replay of a committed chunk must not write a second history row.
        ON CONFLICT (job_id, opportunity_id) WHERE job_id IS NOT NULL
          DO NOTHING`,
       [

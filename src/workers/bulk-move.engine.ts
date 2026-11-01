@@ -17,6 +17,7 @@ export class BulkMoveEngine {
   ) {}
 
   async claimOrPromote(client: IQueryClient): Promise<IBulkJob | null> {
+    // Finish an already-active job before promoting a queued one.
     const claimed = await this.jobs.claimActiveForWork(client);
     if (claimed !== null) {
       return claimed;
@@ -68,11 +69,13 @@ export class BulkMoveEngine {
   ): Promise<void> {
     const counts = await this.items.countByJob(job.id, client);
     if (counts.total > config.maxBulkMoveSize) {
+      // Cap check happens during resolve, before any stage change.
       await this.jobs.markFailed(client, job.id, 'SNAPSHOT_TOO_LARGE');
       return;
     }
     const done = page.scanned < config.resolvePageSize;
     if (page.lastId === null) {
+      // Empty walk: nothing to copy, skip apply.
       await this.jobs.markRunning(client, job.id);
       return;
     }
@@ -88,6 +91,7 @@ export class BulkMoveEngine {
     job: IBulkJob,
     config: AppConfig,
   ): Promise<void> {
+    // Yield on row contention instead of blocking other writers.
     await client.query("SET LOCAL lock_timeout = '250ms'");
     const claimed = await this.items.claimPending(
       client,
@@ -148,6 +152,7 @@ export class BulkMoveEngine {
     }
     if (
       row.version !== item.seenVersion ||
+      // Human edit after enqueue wins even if version happened to match.
       row.stageChangedAt.getTime() > job.createdAt.getTime()
     ) {
       return SkipReason.CONFLICT;

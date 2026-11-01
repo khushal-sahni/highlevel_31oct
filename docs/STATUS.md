@@ -1,6 +1,6 @@
 # STATUS.md
 > Weekend dashboard. Read this first. Update this last.
-> Last updated: 2026-11-01 | Session: #10
+> Last updated: 2026-11-01 | Session: #11
 
 ---
 
@@ -28,7 +28,7 @@
 
 ## Where We Left Off
 
-Session #10 made 3110 the API port everywhere (compose, Docker, env, bench, docs). Session #9 re-measured the three brief scenarios with four workers. Do not squash. Do not push unless asked.
+Session #11 added short why-only comments on the non-obvious bulk-job spots. Session #10 made 3110 the API port everywhere. Do not squash. Do not push unless asked.
 
 ---
 
@@ -76,7 +76,7 @@ None.
 
 | Metric | Value |
 |---|---|
-| Total sessions | 10 |
+| Total sessions | 11 |
 | Modules complete | Part 1 + bulk job + seed/measure + polish + fair chunks + N=4 bench |
 | Hard-property tests | 9 |
 | Last measured | 2026-11-01 (~5,600 rows/s on M4, N=4; N=1 floor 21.8s) |

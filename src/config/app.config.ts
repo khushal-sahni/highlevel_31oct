@@ -10,7 +10,7 @@ const DEFAULT_STALE_MS = 30_000;
 const DEFAULT_FATAL = 5;
 const DEFAULT_IN_FLIGHT = 4;
 const DEFAULT_OPEN_JOBS = 8;
-const PERMIT_BASE = 742_900;
+const PERMIT_BASE = 742_900; // Arbitrary namespace so advisory keys do not collide.
 
 interface IJobInts {
   readonly port: number;
@@ -44,6 +44,7 @@ export class AppConfig {
     this.permitBase = PERMIT_BASE;
   }
 
+  // Getters re-read env so tests can shrink chunk/cap after Nest constructs this.
   get maxBulkMoveSize(): number {
     return AppConfig.readInt('MAX_BULK_MOVE_SIZE', DEFAULT_MAX_BULK, 1);
   }

@@ -76,6 +76,7 @@ export class CreateBulkMoveDto {
       filter.createdBefore,
     ].some((value) => value !== undefined);
     if (!present) {
+      // Refuse a request that would snapshot every deal in the workspace.
       throw new ValidationError('at least one filter field is required');
     }
   }

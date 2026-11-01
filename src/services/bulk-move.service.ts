@@ -32,6 +32,7 @@ export class BulkMoveService {
     const bodyHash = hashBulkBody(input);
     const existing = await this.jobs.findByKey(workspaceId, idempotencyKey);
     if (existing !== null) {
+      // Replay the original job before the open-job cap, so a retry is not 429.
       return this.rejectOrReturn(existing, bodyHash);
     }
     await this.rejectIfBusy(workspaceId);
@@ -101,6 +102,7 @@ export class BulkMoveService {
       if (!isUniqueViolation(error)) {
         throw error;
       }
+      // Two POSTs with the same key raced; return the winner's row.
       const raced = await this.jobs.findByKey(
         options.workspaceId,
         options.idempotencyKey,

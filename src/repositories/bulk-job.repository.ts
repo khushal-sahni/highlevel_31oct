@@ -76,6 +76,7 @@ export class BulkJobRepository {
   }
 
   async claimActiveForWork(client: IQueryClient): Promise<IBulkJob | null> {
+    // SKIP LOCKED: another worker already has this row. NULLS FIRST: stalled first.
     const result = await client.query<IBulkJobRow>(
       `SELECT ${JOB_COLUMNS} FROM bulk_jobs
        WHERE status IN ($1, $2)
@@ -97,6 +98,7 @@ export class BulkJobRepository {
       return this.markPromoted(client, id);
     } catch (error: unknown) {
       if (isUniqueViolation(error)) {
+        // Partial unique index: this workspace already has a resolving/running job.
         return null;
       }
       throw error;
@@ -104,6 +106,7 @@ export class BulkJobRepository {
   }
 
   private async pickQueuedJob(client: IQueryClient): Promise<string | null> {
+    // Oldest queued job in a workspace that has no resolving/running job.
     const picked = await client.query<{ id: string }>(
       `SELECT j.id FROM bulk_jobs j
        JOIN (
@@ -201,6 +204,7 @@ export class BulkJobRepository {
     options: { jobId: string; fatalLimit: number },
   ): Promise<void> {
     await client.query(
+      // Fail in SQL so two workers cannot race the counter past the limit.
       `UPDATE bulk_jobs
        SET consecutive_errors = consecutive_errors + 1,
            status = CASE

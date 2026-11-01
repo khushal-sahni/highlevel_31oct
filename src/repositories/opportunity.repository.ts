@@ -138,7 +138,7 @@ export class OpportunityRepository {
            updated_at = now()
        WHERE id = $2
          AND workspace_id = $3
-         AND version = $4
+         AND version = $4 -- CAS: a concurrent edit makes this UPDATE return 0 rows.
        RETURNING id, workspace_id, stage_id, name, value::text, status,
                  owner_id, version, stage_changed_at, created_at, updated_at`,
       [

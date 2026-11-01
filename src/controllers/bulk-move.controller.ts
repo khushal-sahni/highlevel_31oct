@@ -30,7 +30,7 @@ export class BulkMoveController {
   ) {}
 
   @Post()
-  @HttpCode(202)
+  @HttpCode(202) // Accepted: the worker moves deals after this returns.
   async enqueue(
     @WorkspaceId() workspaceId: string,
     @Headers('idempotency-key') idempotencyKey: string | undefined,

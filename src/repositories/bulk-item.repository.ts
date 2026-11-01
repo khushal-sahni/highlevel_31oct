@@ -197,6 +197,7 @@ export class BulkItemRepository {
   }
 
   private resolveSql(filterClause: string): string {
+    // Walk the (workspace, stage, id) index, then filter in the page — no extra indexes.
     return `
       WITH page AS (
         SELECT id, version, owner_id, status, value, created_at
@@ -215,16 +216,18 @@ export class BulkItemRepository {
       ins AS (
         INSERT INTO bulk_move_items (job_id, opportunity_id, seen_version, state)
         SELECT $5, id, version, $6 FROM matched
-        ON CONFLICT DO NOTHING
+        ON CONFLICT DO NOTHING -- Resume: this page may already have been copied.
         RETURNING opportunity_id
       )
       SELECT
         (SELECT COUNT(*)::text FROM page) AS scanned,
+        -- Cursor is the last scanned id, not the last match, so the walk cannot stall.
         (SELECT id FROM page ORDER BY id DESC LIMIT 1) AS last_id,
         (SELECT COUNT(*)::text FROM ins) AS inserted`;
   }
 
   private moveSql(filterClause: string): string {
+    // Move only if version, stage_changed_at, and the original filter still hold.
     return `
       WITH claimed(opportunity_id, seen_version) AS (
         SELECT * FROM UNNEST($1::uuid[], $2::int[])

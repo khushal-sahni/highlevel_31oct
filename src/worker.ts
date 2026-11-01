@@ -4,6 +4,7 @@ import { AppModule } from './app.module';
 import { LoggerService } from './services/logger.service';
 import { BulkMoveWorker } from './workers/bulk-move.worker';
 
+// Advisory locks are session-scoped; one connection = one in-flight chunk.
 if (process.env['DATABASE_POOL_MAX'] === undefined) {
   process.env['DATABASE_POOL_MAX'] = '1';
 }

@@ -46,7 +46,7 @@ export class OpportunityService {
     const rows = await this.opportunities.listByStage({
       workspaceId,
       stageId: query.stageId,
-      limit: query.limit + 1,
+      limit: query.limit + 1, // Extra row tells us whether a nextCursor exists.
       cursor: query.cursor,
     });
     return this.toPage(rows, query.limit);

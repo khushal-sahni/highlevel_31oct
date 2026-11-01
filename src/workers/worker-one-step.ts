@@ -3,6 +3,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../app.module';
 import { BulkMoveWorker } from './bulk-move.worker';
 
+// Advisory locks are session-scoped; one connection = one in-flight chunk.
 if (process.env['DATABASE_POOL_MAX'] === undefined) {
   process.env['DATABASE_POOL_MAX'] = '1';
 }
@@ -15,6 +16,7 @@ class OneStepProcess {
   async start(): Promise<void> {
     const app = await NestFactory.createApplicationContext(AppModule);
     const worker = app.get(BulkMoveWorker);
+    // Freeze after claim so the parent can start two workers holding locks.
     await worker.stepHeld(() => this.waitForGo());
     await app.close();
   }

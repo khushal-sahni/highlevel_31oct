@@ -71,7 +71,7 @@ describe('BulkMoveWorker', () => {
   it('should finish a killed job without double-applying', async () => {
     const ws = await fixtures.createWorkspaceWithStages();
     await createDeals(app, ws, ['A', 'B', 'C']);
-    process.env['APPLY_CHUNK_SIZE'] = '1';
+    process.env['APPLY_CHUNK_SIZE'] = '1'; // Getter re-reads env; one deal per step so we can kill mid-job.
     const job = await enqueue(app, ws, 'resume-1', stageId(ws, 0), stageId(ws, 1));
     await runUntil(worker, app, ws, job.id, [JobStatus.RUNNING]);
     await worker.step();
@@ -137,7 +137,7 @@ describe('BulkMoveWorker', () => {
   it('should fail resolve over the cap and move nothing', async () => {
     const ws = await fixtures.createWorkspaceWithStages();
     await createDeals(app, ws, ['One', 'Two', 'Three']);
-    process.env['MAX_BULK_MOVE_SIZE'] = '2';
+    process.env['MAX_BULK_MOVE_SIZE'] = '2'; // Getter re-reads env so this job hits the cap.
     const job = await enqueue(app, ws, 'cap-1', stageId(ws, 0), stageId(ws, 1));
     await runUntil(worker, app, ws, job.id, [JobStatus.FAILED]);
     delete process.env['MAX_BULK_MOVE_SIZE'];
@@ -160,6 +160,7 @@ describe('BulkMoveWorker', () => {
       .expect(429);
     const replay = await enqueue(app, ws, 'open-0', stageId(ws, 0), stageId(ws, 1));
     expect(replay.id).toBeDefined();
+    // Close leftover open jobs so later tests are not blocked by the 8-job cap.
     await pool.query(
       `UPDATE bulk_jobs SET status = $2
        WHERE workspace_id = $1 AND status IN ($3, $4, $5)`,
@@ -305,6 +306,7 @@ async function createDeals(
 }
 
 async function runForkedSteps(): Promise<void> {
+  // Both children claim first, then go together — proves two workspaces at once.
   const children = await Promise.all([forkOneStep(), forkOneStep()]);
   for (const child of children) {
     child.send({ go: true });

@@ -29,6 +29,26 @@
 
 ## Sessions
 
+## Session #11 — 2026-11-01
+> Why-only comments on the interview-squint spots.
+
+### Built
+- Nothing.
+
+### Changed
+- Short `//` / `--` comments on worker, engine, job/item/transition SQL, filter SQL, migrations, bulk enqueue, config getters, and the fairness-test fork
+
+### Fixed
+- Nothing.
+
+### Deferred / Not Done
+- No comments on seed, bench, mappers, or Part 1 CRUD
+
+### New Tech Debt
+- None.
+
+---
+
 ## Session #10 — 2026-11-01
 > API port is 3110 everywhere.
 
