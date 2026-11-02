@@ -1,6 +1,6 @@
 # Benchmarks
 
-Measured 2026-11-01 on this machine with **four worker processes**. Rough numbers from one run. Reproduce with `npm run seed:large`, then API + four workers up, then `npm run bench`.
+Measured 2026-11-02 on this machine with **four worker processes**. Rough numbers from one run. Reproduce with `npm run seed:large`, then API + four workers up, then `npm run bench`.
 
 The 2026-10-31 one-worker run is kept below as the N=1 floor.
 
@@ -29,37 +29,37 @@ Throughput is `moved / wall-clock seconds` for that job.
 
 One workspace still applies one chunk transaction at a time (the job row is locked for that chunk). After that commit, another worker can take the next chunk, so the 50ms pauses overlap. That is why N=4 is faster than N=1 on the same 50k job. It is not four parallel applies on one tenant.
 
-## Results (N=4, 2026-11-01)
+## Results (N=4, 2026-11-02)
 
 ### Baseline (before the job)
 
 | Call | Time |
 |---|---|
-| List-by-stage, large workspace | 130 ms |
-| List-by-stage, small workspace | 5 ms |
+| List-by-stage, large workspace | 128 ms |
+| List-by-stage, small workspace | 3 ms |
 
 ### Bulk move of 50,000
 
 | Metric | Value |
 |---|---|
-| Wall-clock | 9.0 s |
+| Wall-clock | 8.3 s |
 | Moved | 50,000 |
-| Sustained throughput | ~5,600 rows/s |
+| Sustained throughput | ~6,000 rows/s |
 
-Job id: `01a1963a-5a21-7b10-864b-a12ae0de0b71`
+Job id: `01a19b18-9351-76a4-8749-ce2f92ebdbfb`
 
 ### Interactive requests during that run
 
 | Where | Samples | p95 | p99 |
 |---|---|---|---|
-| Same workspace (list + one single move outside the filter) | 416 | 5 ms | 31 ms |
-| Different workspace (list-by-stage) | 208 | 3 ms | 6 ms |
+| Same workspace (list + one single move outside the filter) | 374 | 5 ms | 172 ms |
+| Different workspace (list-by-stage) | 187 | 3 ms | 4 ms |
 
 ### Kill and resume
 
 | Metric | Value |
 |---|---|
-| Wall-clock (including kill and worker restart) | 9.7 s |
+| Wall-clock (including kill and worker restart) | 10.6 s |
 | Moved | 50,000 |
 | Skipped | 0 |
 | Transitions for the job | 50,000 |
@@ -67,7 +67,7 @@ Job id: `01a1963a-5a21-7b10-864b-a12ae0de0b71`
 | Transition count equals moved | yes |
 | Every moved row in the target stage | yes |
 
-Job id: `01a1963a-7d33-7865-8cfb-1fe0e10db403`
+Job id: `01a19b18-b3a2-7033-be68-52f4049cb955`
 
 The four workers were killed after 1,000 rows had committed, then started again. Resume is the remaining `pending` item rows. No second transition was written for a row already moved.
 

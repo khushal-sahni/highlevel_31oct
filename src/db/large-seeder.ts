@@ -17,6 +17,21 @@ import {
 const BATCH = 2_000;
 const SLICE = 50_000;
 
+interface IInsertStageOptions {
+  readonly workspaceId: string;
+  readonly stageId: string;
+  readonly count: number;
+  readonly origin?: number;
+}
+
+interface IInsertBatchOptions {
+  readonly workspaceId: string;
+  readonly stageId: string;
+  readonly start: number;
+  readonly end: number;
+  readonly origin: number;
+}
+
 export class LargeSeeder {
   constructor(
     private readonly db: DatabasePool,
@@ -97,12 +112,19 @@ export class LargeSeeder {
   }
 
   private async insertLarge(): Promise<void> {
+    let origin = 0;
     for (let i = 0; i < LARGE_STAGE_COUNTS.length; i += 1) {
       const count = LARGE_STAGE_COUNTS[i];
       if (count === undefined) {
         continue;
       }
-      await this.insertStage(LARGE_WORKSPACE_ID, largeStageId(i + 1), count);
+      await this.insertStage({
+        workspaceId: LARGE_WORKSPACE_ID,
+        stageId: largeStageId(i + 1),
+        count,
+        origin,
+      });
+      origin += count;
       this.logger.info(`Large stage ${i + 1}: ${count} rows`);
     }
   }
@@ -126,31 +148,29 @@ export class LargeSeeder {
       if (count === undefined) {
         continue;
       }
-      await this.insertStage(
+      await this.insertStage({
         workspaceId,
-        smallStageId(workspaceIndex, i + 1),
+        stageId: smallStageId(workspaceIndex, i + 1),
         count,
-      );
+      });
     }
   }
 
-  private async insertStage(
-    workspaceId: string,
-    stageId: string,
-    count: number,
-  ): Promise<void> {
-    for (let start = 1; start <= count; start += BATCH) {
-      const end = Math.min(start + BATCH - 1, count);
-      await this.insertBatch(workspaceId, stageId, start, end);
+  private async insertStage(options: IInsertStageOptions): Promise<void> {
+    const origin = options.origin ?? 0;
+    for (let start = 1; start <= options.count; start += BATCH) {
+      const end = Math.min(start + BATCH - 1, options.count);
+      await this.insertBatch({
+        workspaceId: options.workspaceId,
+        stageId: options.stageId,
+        start,
+        end,
+        origin,
+      });
     }
   }
 
-  private async insertBatch(
-    workspaceId: string,
-    stageId: string,
-    start: number,
-    end: number,
-  ): Promise<void> {
+  private async insertBatch(options: IInsertBatchOptions): Promise<void> {
     await this.db.query(
       `INSERT INTO opportunities (
          workspace_id, stage_id, name, value, status, owner_id,
@@ -166,11 +186,18 @@ export class LargeSeeder {
            ELSE 'open'
          END,
          'owner-' || (i % 50),
-         $5::timestamptz + (i * INTERVAL '90 seconds'),
-         $5::timestamptz + (i * INTERVAL '90 seconds'),
-         $5::timestamptz + (i * INTERVAL '90 seconds')
+         $5::timestamptz + (($6 + i) * INTERVAL '90 seconds'),
+         $5::timestamptz + (($6 + i) * INTERVAL '90 seconds'),
+         $5::timestamptz + (($6 + i) * INTERVAL '90 seconds')
        FROM generate_series($3::int, $4::int) AS i`,
-      [workspaceId, stageId, start, end, LARGE_SEED_START],
+      [
+        options.workspaceId,
+        options.stageId,
+        options.start,
+        options.end,
+        LARGE_SEED_START,
+        options.origin,
+      ],
     );
   }
 

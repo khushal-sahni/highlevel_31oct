@@ -29,6 +29,29 @@
 
 ## Sessions
 
+## Session #14 — 2026-11-02
+> Submission write-up matches the code: 10× is total walk cost, not one unbounded chunk. Large seed timestamps actually span ~18 months.
+
+### Built
+- Nothing.
+
+### Changed
+- Large seeder: running origin across stages so 500k rows span ~520 days
+- DESIGN.md 10×, lock_timeout (apply-only), permit/sleep order, collision skip note, N=1 p95/p99
+- DECISIONS.md 10× decision text
+- BENCHMARKS.md N=4 re-run (8.3s, ~6,000 rows/s, same-workspace p99 172ms)
+
+### Fixed
+- DESIGN claimed one resolve chunk could walk millions of index entries and stall the heartbeat; the LIMIT is 2,000 scanned rows
+- Seed docs said ~18 months while each stage reset the timestamp counter (~125 days)
+
+### Deferred / Not Done
+- Did not re-run the N=1 floor; New Lead 50k slice is unchanged
+- REVIEW-QA.md still has the old 10× wording (gitignored)
+
+### New Tech Debt
+- Same-workspace p99 on this N=4 run was 172ms (previous N=4 line was 31ms)
+
 ## Session #13 — 2026-11-02
 > README so a reviewer can run large seed without guessing whether it starts Postgres.
 

@@ -45,7 +45,7 @@ The index that makes **apply** cheap is `bulk_move_items (job_id, state, opportu
 
 The index that makes **resolve** and list-by-stage cheap is `opportunities (workspace_id, stage_id, id)`. A filter with no stage walks `(workspace_id, id)`. There is no extra index per owner, status, or value; those predicates are applied on the walk. That is a deliberate write-cost choice on a 500,000-row seed, and it is the scan that fails first at 10× (below).
 
-A process holds one of `MAX_IN_FLIGHT_CHUNKS` permits (`pg_try_advisory_lock` on keys `742901` through `742900 + N`) only for the duration of a chunk. `lock_timeout` is 250ms. A timeout is a yield: the worker retries later. It is not one of the five fatal chunk errors.
+A process holds one of `MAX_IN_FLIGHT_CHUNKS` permits (`pg_try_advisory_lock` on keys `742901` through `742900 + N`) only for the duration of a chunk. Apply sets `lock_timeout` to 250ms. A timeout is a yield: the worker retries later. It is not one of the five fatal chunk errors.
 
 ```mermaid
 stateDiagram-v2
@@ -92,13 +92,13 @@ flowchart TD
   timeout -->|yes| yieldTimeout
   timeout -->|no| commit
   resolvePage --> commit
-  commit --> sleep
+  commit --> unlock
+  yieldTimeout --> unlock
+  unlock --> sleep
   yieldLock --> sleep
-  yieldTimeout --> sleep
   applyChunk -.-> crash
   resolvePage -.-> crash
   crash --> rollback
-  sleep --> unlock
 ```
 
 ---
@@ -197,7 +197,7 @@ sequenceDiagram
   Note over Row: First commit wins
   Note over Row: Loser writes nothing
   Note over API: Person gets 409
-  Note over Worker: Item is skipped conflict
+  Note over Worker: Skip already_there if they landed on the target, else conflict
 ```
 
 ---
@@ -249,7 +249,7 @@ If only one workspace has work, free processes still take the next chunk after t
 
 The hole: it is still one Postgres. WAL and cache traffic from the large workspace can nudge latency in another workspace. We do not pretend a `WHERE workspace_id = $1` gives cache isolation. A read replica and partitioning are how we would close that hole; they are not in this submission.
 
-[BENCHMARKS.md](BENCHMARKS.md) is the four-worker run: other-workspace list p95 3ms / p99 6ms, same-workspace list-plus-move p95 5ms / p99 31ms. The 2026-10-31 one-worker line (21.8s, p95 4ms / 3ms) is the N=1 floor.
+[BENCHMARKS.md](BENCHMARKS.md) is the four-worker run: other-workspace list p95 3ms / p99 4ms, same-workspace list-plus-move p95 5ms / p99 172ms. The 2026-10-31 one-worker line (21.8s, same-workspace 4ms/9ms, other-workspace 3ms/4ms) is the N=1 floor.
 
 ---
 
@@ -308,11 +308,11 @@ Filter fields: `stageId`, `ownerId`, `status`, `valueMin`, `valueMax`, `createdA
 
 ## What breaks at 10×
 
-A 500,000-row move is refused by the cap. Resolve stops at 50,001 and the job fails before any stage change.
+A 500,000-row move is refused by the cap. After each resolve page, if the item count is over 50,000, the job fails before any stage change. The stored snapshot can overshoot by at most one 2,000-row page.
 
 If that cap were lifted, the apply loop would still finish. About 200 rows per chunk and a 50ms pause is slow — on the order of several minutes — and it stays correct. Throughput is not the first thing that fails.
 
-The first real break is **resolve**, once one workspace has 20 million opportunities and the filter names no stage. One keyset chunk can walk millions of index entries, run past the 30s heartbeat, look stalled, hold a snapshot, and evict the shared cache other workspaces are using. Locks and the version check still hold.
+The first real break is **resolve**, once one workspace has 20 million opportunities and the filter names no stage. Each chunk still reads 2,000 index entries on `(workspace_id, id)`, then applies owner, status, value, and dates on that page. A selective filter still visits about 20 million rows across about 10,000 chunks. That read storm evicts the shared cache other workspaces are using. Heartbeats stay fresh; the job does not look stalled. Locks and the version check still hold.
 
 Already in this submission: the 50,000 cap, and a 2,000-entry bound on every resolve chunk (commit the cursor, heartbeat, pause). That keeps resolve polite at seed size. It does not make a stageless walk over 20M cheap.
 

@@ -88,8 +88,8 @@ Use this format for each decision:
 - **Date**: 2026-10-31
 - **Status**: Accepted
 - **Context**: The brief asks what breaks at a 500,000-record move and at 20M opportunities in one workspace.
-- **Decision**: A move over 50,000 is refused before any stage change. If that cap were lifted, apply would still finish, slowly. The first real break is a stageless resolve across 20M rows: one chunk walks too much index, the heartbeat goes stale, a snapshot is held, and the shared cache is evicted. This submission keeps the cap and bounds every resolve chunk at 2,000 index entries, committing the cursor, heartbeating, and pausing.
-- **Consequences**: Partitioning `opportunities` by `workspace_id` and a read replica are extra-week work. Locks and the version check still hold at 10×.
+- **Decision**: A move over 50,000 is refused before any stage change (the stored snapshot can overshoot by at most one resolve page). If that cap were lifted, apply would still finish, slowly. The first real break is a stageless resolve across 20M rows: each chunk still scans 2,000 index entries, so a selective owner/status/value filter visits the whole workspace across many chunks, evicts the shared cache, and stays heartbeating. This submission keeps the cap and bounds every resolve chunk at 2,000 index entries, committing the cursor, heartbeating, and pausing.
+- **Consequences**: Partitioning `opportunities` by `workspace_id` and a read replica are extra-week work. Locks and the version check still hold at 10×. Chunking makes the walk polite; it does not make it cheap.
 
 ### Another week, ranked
 - **Date**: 2026-10-31

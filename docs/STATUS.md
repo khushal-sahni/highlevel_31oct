@@ -1,6 +1,6 @@
 # STATUS.md
 > Weekend dashboard. Read this first. Update this last.
-> Last updated: 2026-11-02 | Session: #13
+> Last updated: 2026-11-02 | Session: #14
 
 ---
 
@@ -28,7 +28,7 @@
 
 ## Where We Left Off
 
-Session #13 made README run/seed/bench order match what a reviewer actually types (Postgres first). Session #12 ran the assignment suite. Do not squash. Do not push unless asked.
+Session #14 made DESIGN.md's 10× section match the code (chunking bounds a page; a stageless 20M walk is still O(workspace)), and gave the large seed a global timestamp origin so ~18 months is true. Re-measured N=4. Do not squash. Do not push unless asked.
 
 ---
 
@@ -62,7 +62,7 @@ See [README.md](../README.md).
 ## Tech Debt
 
 - Accepted design holes: one shared Postgres, new-key idempotency slip-through.
-- Same-workspace interactive p99 was 31ms on the N=4 run (N=1 floor was 9ms).
+- Same-workspace interactive p99 was 172ms on the 2026-11-02 N=4 run (N=1 floor was 9ms).
 
 ---
 
@@ -76,7 +76,7 @@ None.
 
 | Metric | Value |
 |---|---|
-| Total sessions | 13 |
+| Total sessions | 14 |
 | Modules complete | Part 1 + bulk job + seed/measure + polish + fair chunks + N=4 bench |
 | Hard-property tests | 15 |
-| Last measured | 2026-11-01 (~5,600 rows/s on M4, N=4; N=1 floor 21.8s) |
+| Last measured | 2026-11-02 (~6,000 rows/s on M4, N=4; N=1 floor 21.8s) |
