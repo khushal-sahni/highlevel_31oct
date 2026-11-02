@@ -29,6 +29,26 @@
 
 ## Sessions
 
+## Session #13 — 2026-11-02
+> README so a reviewer can run large seed without guessing whether it starts Postgres.
+
+### Built
+- Nothing.
+
+### Changed
+- README: assignment-shaped Part 1 / Part 2; large seed starts Postgres first, then `seed:large`, then API, then bench in a second terminal
+
+### Fixed
+- Large-seed command block listed `seed:large` before `docker compose up`
+
+### Deferred / Not Done
+- BENCHMARKS.md intro still says seed first; reproduce block was already Postgres-first
+
+### New Tech Debt
+- Nothing.
+
+---
+
 ## Session #12 — 2026-11-02
 > Assignment tests plus extra correctness cases.
 
