@@ -1,6 +1,6 @@
 # STATUS.md
 > Weekend dashboard. Read this first. Update this last.
-> Last updated: 2026-11-01 | Session: #11
+> Last updated: 2026-11-02 | Session: #12
 
 ---
 
@@ -28,7 +28,7 @@
 
 ## Where We Left Off
 
-Session #11 added short why-only comments on the non-obvious bulk-job spots. Session #10 made 3110 the API port everywhere. Do not squash. Do not push unless asked.
+Session #12 ran the assignment suite and added six extra correctness cases. Session #11 added short why-only comments. Do not squash. Do not push unless asked.
 
 ---
 
@@ -76,7 +76,7 @@ None.
 
 | Metric | Value |
 |---|---|
-| Total sessions | 11 |
+| Total sessions | 12 |
 | Modules complete | Part 1 + bulk job + seed/measure + polish + fair chunks + N=4 bench |
-| Hard-property tests | 9 |
+| Hard-property tests | 15 |
 | Last measured | 2026-11-01 (~5,600 rows/s on M4, N=4; N=1 floor 21.8s) |

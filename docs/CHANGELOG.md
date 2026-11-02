@@ -29,6 +29,25 @@
 
 ## Sessions
 
+## Session #12 — 2026-11-02
+> Assignment tests plus extra correctness cases.
+
+### Built
+- Six extra bulk-job correctness tests in `src/workers/bulk-move.correctness.spec.ts`: filter skip after resolve, already-there, new-key no double-move, filter snapshot selection, empty match set, tenant poll 404
+- Shared test helpers: `src/test/bulk-http.ts`, `src/test/run-until.ts`, `src/test/fork-workers.ts`
+
+### Changed
+- Worker spec uses the shared helpers and drains leftover fairness-test jobs so the queued-behind-active case is not order-dependent
+
+### Fixed
+- Nothing in product code. Fairness leftover jobs made the next test see the first job still queued.
+
+### Deferred / Not Done
+- Ranked extra-week list (partition, adaptive pause, replica, same-body window)
+
+### New Tech Debt
+- Nothing.
+
 ## Session #11 — 2026-11-01
 > Why-only comments on the interview-squint spots.
 
